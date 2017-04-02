@@ -1,3 +1,3 @@
 package io.sherlock.core
 
-case class HeartBeat(contextRoot: String, ip: String, port: Int)
+case class HeartBeat(ip: String, path: String, port: Int)

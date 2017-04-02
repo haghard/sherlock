@@ -2,7 +2,7 @@ package io.sherlock.detector
 
 import java.util.concurrent.TimeUnit._
 
-import io.sherlock.detector.MyPhiAccrualFailureDetector.Clock
+import io.sherlock.detector.PhiAccrualFailureDetector.Clock
 import org.scalatest.{ Matchers, WordSpec }
 
 import scala.collection.immutable.IndexedSeq
@@ -26,7 +26,7 @@ class FailureDetectorTest extends WordSpec with Matchers {
         def apply() = NANOSECONDS.toMillis(System.nanoTime)
       }
 
-      val m = MyPhiAccrualFailureDetector(h)
+      val m = PhiAccrualFailureDetector(h)
       println(m.phi)
       Thread.sleep(2000)
       println(m.phi)

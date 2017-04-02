@@ -5,7 +5,7 @@ import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 name := "sherlock"
 version := "0.0.1"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.12.1"
 
 libraryDependencies ++= Dependencies.Compile.all
 libraryDependencies ++= Dependencies.Test.all
