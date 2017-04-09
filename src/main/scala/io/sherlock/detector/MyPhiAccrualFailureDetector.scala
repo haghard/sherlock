@@ -1,3 +1,5 @@
+/*
+
 package io.sherlock.detector
 
 import scala.concurrent.duration._
@@ -73,5 +75,5 @@ case class MyPhiAccrualFailureDetector(timestamps: IndexedSeq[Long])(implicit cl
       phi(timeDiff, mean + acceptableHeartbeatPauseMillis, stdDeviationP)
     }
   }
-
 }
+*/

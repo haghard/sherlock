@@ -1,11 +1,11 @@
 import sbt._
 
 object Dependencies {
-  val akkaVersion = "2.4.17"
+  val akkaVersion = "2.5.0-RC2" //"2.4.17"
 
   object Compile {
     val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
-    val akkaDistData = "com.typesafe.akka" %% "akka-distributed-data-experimental" % akkaVersion
+    val akkaDistData = "com.typesafe.akka" %% "akka-distributed-data" % akkaVersion
     val slf4j = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
     val logback = "ch.qos.logback"  %   "logback-classic" % "1.1.2"
 

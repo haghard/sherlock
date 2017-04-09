@@ -20,7 +20,7 @@ class ServiceTest extends TestKit(ActorSystem()) with WordSpecLike with Implicit
         Thread.sleep(10)
         service ! HeartBeat("/foo", "192.168.1.2", 80)
       }
-      val start = System.currentTimeMillis()
+      val start = System.currentTimeMillis
       (1 to 10).foreach { i ⇒
         val r = Random.nextInt(15)
         Thread.sleep(50 + r)
@@ -28,23 +28,22 @@ class ServiceTest extends TestKit(ActorSystem()) with WordSpecLike with Implicit
 
         service ! Service.GetAccuracy
         val result = expectMsgType[Service.Result]
-        println(s"${System.currentTimeMillis() - start}: $result")
+        println(s"${System.currentTimeMillis - start}: $result")
       }
 
       val service2 = system.actorOf(Service.props, "foo2")
       service2 ! Service.GetAccuracy
       val result = expectMsgType[Service.Result]
-      println(s"${System.currentTimeMillis() - start}: $result")
+      println(s"${System.currentTimeMillis - start}: $result")
       Thread.sleep(200)
       service2 ! Service.GetAccuracy
       val result2 = expectMsgType[Service.Result]
-      println(s"${System.currentTimeMillis() - start}: $result2")
+      println(s"${System.currentTimeMillis - start}: $result2")
       Thread.sleep(5000)
       service2 ! Service.GetAccuracy
       val result3 = expectMsgType[Service.Result]
-      println(s"${System.currentTimeMillis() - start}: $result3")
+      println(s"${System.currentTimeMillis - start}: $result3")
 
     }
   }
-
 }

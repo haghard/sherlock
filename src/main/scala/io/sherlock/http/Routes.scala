@@ -17,7 +17,8 @@ class Routes(services: ActorRef) extends Serialization {
     pathPrefix("service") {
       path(Segments) { root ⇒
         get {
-          implicit val timeout: Timeout = 5.seconds //to give a chance to read from a local store
+          implicit val timeout: Timeout = 5.seconds
+          //to give a chance to read from a local store
           complete {
             (services ? ServiceRegistry.Get("/" + root.mkString("/"))).mapTo[Service.Result]
           }

@@ -10,7 +10,7 @@ import net.ceedubs.ficus.Ficus._
 
 object Main extends App {
   val conf = ConfigFactory.load()
-  implicit val system = ActorSystem("sherlock", conf)
+  implicit val system = ActorSystem("registry", conf)
   implicit val materializer = ActorMaterializer.create(system)
   import system.dispatcher
 
@@ -20,14 +20,15 @@ object Main extends App {
   val httpPort = conf.as[Int]("port")
   val services = system.actorOf(ServiceRegistry.props, "service-registry")
 
+  val httpApi = new Routes(services).route
+
   Http()
-    .bindAndHandle(new Routes(services).route, hostname, httpPort)
+    .bindAndHandle(httpApi, hostname, httpPort)
     .onComplete {
       case scala.util.Success(_) ⇒
-        println(s"Akka: ${hostname}:${akkaPort}")
-        println(s"SeedNodes: ${seedNodes.mkString(",")}")
-        println(s"Akka: ${seedNodes.mkString(",")}")
-        println(s"Http port: ${httpPort}")
+        println(s"seed-nodes: ${seedNodes.mkString(",")}")
+        println(s"akka node: ${hostname}:${akkaPort}")
+        println(s"http port: ${httpPort}")
       case scala.util.Failure(_) ⇒
         System.exit(-1)
     }
