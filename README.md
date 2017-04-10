@@ -14,7 +14,11 @@ sbt run -DAKKA_PORT=0 -DPORT=0
 ```
 
 
-curl -X POST -d '{"ip":"192.168.0.1","path":"/users/v1.0","port":9000}' --header "Content-Type:application/json" http://localhost:9091/service --include
+
+sbt run -DAKKA_HOST=192.168.178.99 -DAKKA_PORT=2552 -DPORT=9090 -Dakka.cluster.seed-nodes.0=akka.tcp://sd@192.168.178.99:2552 -Dakka.cluster.seed-nodes.1=akka.tcp://sd@192.168.178.108:2552
+sbt run -DAKKA_HOST=192.168.178.108 -DAKKA_PORT=2552 -DPORT=9090 -Dakka.cluster.seed-nodes.0=akka.tcp://sd@192.168.178.99:2552 -Dakka.cluster.seed-nodes.1=akka.tcp://sd@192.168.178.108:2552
+
+
 curl -X POST -d '{"ip":"192.168.0.2","path":"/users/v1.0","port":9000}' --header "Content-Type:application/json" http://localhost:9091/service --include
 
 

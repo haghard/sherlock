@@ -40,13 +40,13 @@ class Service extends Actor with ActorLogging {
     log.info("Start Service {}", self.path.name)
 
   def getOrCreate(serviceTSName: String): ActorRef =
-    context.child(serviceTSName).getOrElse(context.actorOf(ServiceTS.props, serviceTSName))
+    context.child(serviceTSName).getOrElse(context.actorOf(ServiceInstance.props, serviceTSName))
 
   def getOrCreateAndSubscribe(serviceTSName: String): ActorRef =
     context.child(serviceTSName).getOrElse {
       log.info("service-name {}", serviceTSName)
       replicator ! Update(DataKey, ORSet(), writeMajority)(_ + serviceTSName)
-      context.actorOf(ServiceTS.props, serviceTSName)
+      context.actorOf(ServiceInstance.props, serviceTSName)
     }
 
   override def receive = {
@@ -55,7 +55,7 @@ class Service extends Actor with ActorLogging {
       getOrCreateAndSubscribe(serviceTSName) ! hb
     case GetAccuracy ⇒
       val f = Future.traverse(context.children) { serviceTs ⇒
-        (serviceTs ? GetAccuracy).mapTo[ServiceTS.Accuracy]
+        (serviceTs ? GetAccuracy).mapTo[ServiceInstance.Accuracy]
           .map(a ⇒ serviceTs.path.name → a.percentage)
       }.map(_.toMap).map(Result)
       f.pipeTo(sender())
