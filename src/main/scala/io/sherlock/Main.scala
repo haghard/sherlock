@@ -10,7 +10,7 @@ import net.ceedubs.ficus.Ficus._
 
 object Main extends App {
   val conf = ConfigFactory.load()
-  implicit val system = ActorSystem("registry", conf)
+  implicit val system = ActorSystem("ds", conf)
   implicit val materializer = ActorMaterializer.create(system)
   import system.dispatcher
 
