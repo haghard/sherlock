@@ -1,8 +1,8 @@
 package io.sherlock
 
 import akka.actor.ActorSystem
-import akka.testkit.{ ImplicitSender, TestKit }
-import io.sherlock.core.{ HeartBeat, Service }
+import akka.testkit.{ImplicitSender, TestKit}
+import io.sherlock.core.{HeartBeat, Service}
 import org.scalatest.WordSpecLike
 
 import scala.util.Random
@@ -16,15 +16,15 @@ class ServiceTest extends TestKit(ActorSystem()) with WordSpecLike with Implicit
       (1 to 10).foreach { _ ⇒
         val r = Random.nextInt(15)
         Thread.sleep(100 + r)
-        service ! HeartBeat("/foo", "192.168.1.1", 80)
+        service ! HeartBeat("192.168.1.1", "/foo", 80)
         Thread.sleep(10)
-        service ! HeartBeat("/foo", "192.168.1.2", 80)
+        service ! HeartBeat("192.168.1.2", "/foo", 80)
       }
       val start = System.currentTimeMillis
       (1 to 10).foreach { i ⇒
         val r = Random.nextInt(15)
         Thread.sleep(50 + r)
-        service ! HeartBeat("/foo", "192.168.1.2", 80)
+        service ! HeartBeat("192.168.1.2", "/foo", 80)
 
         service ! Service.GetAccuracy
         val result = expectMsgType[Service.Result]
