@@ -3,7 +3,7 @@ package io.sherlock.detector
 import java.util.concurrent.TimeUnit._
 
 import io.sherlock.detector.PhiAccrualFailureDetector.Clock
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.{ Matchers, WordSpec }
 
 import scala.collection.immutable.IndexedSeq
 

@@ -1,6 +1,7 @@
 package io.sherlock
 
-import akka.actor.ActorSystem
+import akka.actor.{ ActorSystem, CoordinatedShutdown }
+import akka.cluster.http.management.ClusterHttpManagement
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory
@@ -21,6 +22,9 @@ object Main extends App {
   val services = system.actorOf(ServiceRegistry.props, "service-registry")
 
   val httpApi = new Routes(services).route
+
+  //ClusterHttpManagement(cluster)
+  //CoordinatedShutdown(system)
 
   Http()
     .bindAndHandle(httpApi, hostname, httpPort)
