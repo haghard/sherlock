@@ -1,5 +1,6 @@
 package io.sherlock
 
+import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.util
@@ -8,7 +9,7 @@ import java.util.concurrent.ConcurrentSkipListSet
 
 import scala.collection.immutable.SortedSet
 import scala.reflect.ClassTag
-import java.util.{ SortedMap ⇒ JSortedMap, TreeMap ⇒ JTreeMap }
+import java.util.{SortedMap => JSortedMap, TreeMap => JTreeMap}
 
 /*
 
@@ -25,6 +26,9 @@ h.get("key_b")
 
 */
 
+import com.roundeights.hasher.Implicits._
+import scala.language.postfixOps
+
 object Hashing {
 
   sealed trait Alg
@@ -35,6 +39,13 @@ object Hashing {
 
   trait HashingAlg[N, A <: Alg] {
     protected val hasher = scala.util.hashing.MurmurHash3
+    protected val salt0 = "sdfw3w345twergt34awedfszd"
+
+    def hash(bytes: Array[Byte]): Int = {
+      val digest = java.security.MessageDigest.getInstance("SHA-256")
+      digest.update("password".getBytes("UTF-8"))
+      digest.digest(bytes)
+    }
 
     def initNodes(nodes: util.Collection[N]): Unit
 
@@ -82,6 +93,7 @@ object Hashing {
         val a = key.getBytes
         val b = toBinary(node)
         val bytes = ByteBuffer.allocate(a.length + b.length).put(a).put(b).array()
+        //val hash =  new BigInteger(1, bytes.md5.bytes).intValue()
         val hash = hasher.arrayHash(bytes)
         allHashes = allHashes + Item(hash, node)
       }
@@ -102,6 +114,7 @@ object Hashing {
 
     override def removeNode(node: Node): Boolean = {
       val bytes = toBinary(node)
+      //val hash =  new BigInteger(1, bytes.md5.bytes).intValue()
       val hash = hasher.arrayHash(bytes)
       println(s"remove $node - $hash")
       node == ring.remove(hash)
@@ -110,6 +123,7 @@ object Hashing {
     override def addNode(node: Node): Boolean = {
       if (validated(node)) {
         val bytes = toBinary(node)
+        //val hash =  new BigInteger(1, bytes.md5.bytes).intValue()
         val hash = hasher.arrayHash(bytes)
         println(s"add $node - $hash")
         ring.put(hash, node)
@@ -119,6 +133,7 @@ object Hashing {
 
     override def read(key: String, rf: Int): Set[Node] = {
       val bytes = key.getBytes
+      //var hash =  new BigInteger(1, bytes.md5.bytes).intValue()
       var hash = hasher.arrayHash(bytes)
       if (!ring.containsKey(hash)) {
         val tailMap = ring.tailMap(hash)

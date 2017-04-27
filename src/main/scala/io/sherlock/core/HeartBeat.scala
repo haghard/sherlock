@@ -1,3 +1,5 @@
 package io.sherlock.core
 
-case class HeartBeat(ip: String, path: String, port: Int)
+import com.github.levkhomich.akka.tracing.TracingSupport
+
+case class HeartBeat(ip: String, path: String, port: Int) extends TracingSupport

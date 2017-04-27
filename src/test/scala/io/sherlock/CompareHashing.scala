@@ -55,6 +55,7 @@ object CompareHashing {
   }
 
   def main(args: Array[String]): Unit = {
+    val start = System.currentTimeMillis
     println("======: ConsistentHash :========")
     val distribution0: Map[String, AtomicInteger] = new util.HashMap[String, AtomicInteger]()
     iter(HashingRouter[String, ConsistentHashing](getNodes(distribution0)), distribution0)
@@ -62,8 +63,10 @@ object CompareHashing {
     println("======: RendezvousHashing :========")
     val distribution1: Map[String, AtomicInteger] = new util.HashMap[String, AtomicInteger]()
     iter(HashingRouter[String, RendezvousHashing](getNodes(distribution1)), distribution1)
-
+    val latency = System.currentTimeMillis - start
+    println("Latency: "  + latency)
 /*
+
     val vnodes = 5
     val replicas = Cache("alpha") :: Cache("beta") :: Cache("gamma") :: Cache("delta") ::
       Cache("epsilon") :: Cache("zeta") :: Cache("eta") ::

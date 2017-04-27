@@ -1,14 +1,17 @@
 package io.sherlock.core
 
-import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.cluster.Cluster
 import akka.cluster.ddata.Replicator._
 import akka.cluster.ddata._
 import akka.pattern._
 import akka.util.Timeout
+import com.github.levkhomich.akka.tracing.ActorTracing
+import com.github.levkhomich.akka.tracing.http.TracingDirectives
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.Random
 
 object Service {
   case object GetAccuracy
@@ -21,7 +24,9 @@ object Service {
 _users_v1.0
 _users_v1.1
 */
-class Service extends Actor with ActorLogging {
+
+
+class Service extends Actor with ActorLogging with ActorTracing with TracingDirectives {
   import Service._
   import context.dispatcher
 
@@ -51,6 +56,15 @@ class Service extends Actor with ActorLogging {
 
   override def receive = {
     case hb @ HeartBeat(ip, _, port) ⇒
+      // sample message
+      trace.sample(hb, "hb-sample")
+      // annotate trace using different methods
+      trace.record(hb, "Start processing")
+      trace.recordKeyValue(hb, "longAnswer", Random.nextLong())
+
+      // log to trace
+      log.debug("request: " + hb)
+
       val serviceTSName = s"$ip:$port"
       getOrCreateAndSubscribe(serviceTSName) ! hb
     case GetAccuracy ⇒
