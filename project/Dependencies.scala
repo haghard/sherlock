@@ -12,22 +12,23 @@ object Dependencies {
     val akkaHttp = "com.typesafe.akka" %% "akka-http" % "10.0.5"
     val akkaSprayJson = "com.typesafe.akka" %% "akka-http-spray-json" % "10.0.5"
     val ficus = "com.iheart" %% "ficus" % "1.4.0"
-    //val akkaClusterManagement = "com.lightbend.akka" %% "akka-management-cluster-http" %  "0.2+20170418-2254"
     val akkaStreams = "com.typesafe.akka" %% "akka-stream"  % akkaVersion
 
-    val guava = "com.google.guava" % "guava" % "21.0"
-    val hasher = "com.roundeights" %% "hasher" % "1.2.0"
 
-    val ckite = "io.ckite" %% "ckite-core" % "0.2.1"
-    
-    val zipkinClient = "com.beachape" %% "zipkin-futures" % "0.2.1"
+    val opentracing = "io.opentracing" % "opentracing-api" % "0.21.0"
+    val zipkinSender = "io.zipkin.reporter" % "zipkin-sender-okhttp3" % "0.7.0"
+    val brave = "io.zipkin.brave" % "brave" % "4.2.0"
 
-    val tracing = "com.github.levkhomich" %% "akka-tracing-http" % "0.5.1"
+    //val guava = "com.google.guava" % "guava" % "21.0"
+    //val zipkinClient = "com.beachape" %% "zipkin-futures" % "0.2.1"
+    //val tracing = "com.github.levkhomich" %% "akka-tracing-http"  % "0.6.1-SNAPSHOT"
+    //val zipkin = "io.zipkin.finagle" %% "zipkin-finagle-http" % "0.4.0"
+    //val akkaClusterManagement = "com.lightbend.akka" %% "akka-management-cluster-http" %  "0.2+20170418-2254"
+    //val zipkin2 = "com.beachape" %% "zipkin-futures" % "0.2.1"
 
     val all = Seq(akkaActor, akkaHttp, akkaHttp, akkaSprayJson,
-      akkaDistData, /*akkaClusterManagement,*/ slf4j, logback, ficus, akkaStreams, hasher, guava, /*ckite,*/
-      tracing)
-    /*, metrics*/
+      akkaDistData, /*akkaClusterManagement,*/ slf4j, logback, ficus, akkaStreams) ++ Seq(opentracing, zipkinSender, brave)
+
   }
 
   object Test {

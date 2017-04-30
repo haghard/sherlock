@@ -14,7 +14,6 @@ object ServiceInstance {
 }
 
 class ServiceInstance extends Actor with ActorLogging {
-
   import ServiceInstance._
 
   implicit val node = Cluster(context.system)
@@ -27,16 +26,18 @@ class ServiceInstance extends Actor with ActorLogging {
   override def preStart(): Unit =
     log.info("service-instance has been started {}", self.path.name)
 
-  def updateHeartBeat(heartBeats: ORSet[Long]): ORSet[Long] = {
+  def updateHeartBeat(heartBeats: ORSet[Long], instanceSpan: brave.Span): ORSet[Long] = {
     val newHeartBeat = System.currentTimeMillis
     val truncated = if (heartBeats.size > maxSize) heartBeats - heartBeats.elements.toList.sorted.head else heartBeats
     log.info("{} hb {} ", self.path.name, newHeartBeat)
+    instanceSpan.finish()
     truncated + newHeartBeat
   }
 
   def await: Receive = {
-    case _: HeartBeat ⇒
-      replicator ! Update(serviceInstanceDataKey, ORSet.empty[Long], WriteLocal)(updateHeartBeat)
+    case m @ HeartBeatTrace(hb, cxt, tracer) ⇒
+      val instanceSpan = tracer.newChild(cxt).name("instance").start()
+      replicator ! Update(serviceInstanceDataKey, ORSet.empty[Long], WriteLocal) { beats ⇒ updateHeartBeat(beats, instanceSpan) }
       context become active
   }
 

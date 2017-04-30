@@ -4,6 +4,7 @@ import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import akka.cluster.Cluster
 import akka.cluster.ddata.Replicator._
 import akka.cluster.ddata.{ DistributedData, ORSet, ORSetKey }
+import brave.propagation.TraceContext
 import io.sherlock.Main.conf
 
 import scala.concurrent.duration._
@@ -13,7 +14,7 @@ object ServiceRegistry {
 
   def rootToName(root: String): String = root.replaceAll("/", "_")
 
-  def props = Props(new ServiceRegistry)
+  def props = Props(new ServiceRegistry())
 }
 
 class ServiceRegistry extends Actor with ActorLogging {
@@ -42,15 +43,19 @@ class ServiceRegistry extends Actor with ActorLogging {
     }
 
   override def receive = {
-    case hb @ HeartBeat(_, path, _) ⇒
-      val serviceName = rootToName(path)
+    case m @ HeartBeatTrace(hb, cxt, tracer) ⇒
+      //HeartBeat(_, path, _) ⇒
+      val registrySpan = tracer.newChild(cxt).name("registry").start()
+      val serviceName = rootToName(hb.path)
       log.info(s"hb {} for {}", hb, serviceName)
-      getOrCreateAndSubscribe(serviceName) ! hb
+      getOrCreateAndSubscribe(serviceName) ! m
+      registrySpan.finish()
     case Get(path) ⇒
       val rootName = rootToName(path)
       log.info("Get root name:{}", rootName)
       context.child(rootName) match {
-        case None ⇒ sender() ! Service.Result(Map.empty)
+        case None ⇒
+          sender() ! Service.Result(Map.empty)
         case Some(instance) ⇒
           instance forward Service.GetAccuracy
       }

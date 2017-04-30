@@ -1,12 +1,15 @@
 package io.sherlock
 
 import akka.actor.{ ActorSystem, CoordinatedShutdown }
-import akka.cluster.http.management.ClusterHttpManagement
+import brave.Tracing
+import zipkin.reporter.AsyncReporter
+import zipkin.reporter.okhttp3.OkHttpSender
+//import akka.cluster.http.management.ClusterHttpManagement
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory
 import io.sherlock.core.ServiceRegistry
-import io.sherlock.http.Routes
+import io.sherlock.http.HttpApi
 import net.ceedubs.ficus.Ficus._
 
 object Main extends App {
@@ -19,12 +22,19 @@ object Main extends App {
   val akkaPort = conf.as[Int]("akka.remote.netty.tcp.port")
   val hostname = conf.as[String]("akka.remote.netty.tcp.hostname")
   val httpPort = conf.as[Int]("port")
-  val services = system.actorOf(ServiceRegistry.props, "service-registry")
+  val registry = system.actorOf(ServiceRegistry.props, "service-registry")
 
-  val httpApi = new Routes(services).route
+  val name = s"${hostname}:${akkaPort}"
 
   //ClusterHttpManagement(cluster)
   //CoordinatedShutdown(system)
+
+  val sender = OkHttpSender.create(conf.as[String]("zipkin-url"))
+  val reporter: AsyncReporter[zipkin.Span] = AsyncReporter.builder(sender).build()
+  val tracing = Tracing.newBuilder().localServiceName(name)
+    .reporter(reporter).build()
+
+  val httpApi = new HttpApi(name, registry, tracing)(system).route
 
   Http()
     .bindAndHandle(httpApi, hostname, httpPort)
@@ -36,4 +46,10 @@ object Main extends App {
       case scala.util.Failure(_) ⇒
         System.exit(-1)
     }
+
+  sys.addShutdownHook {
+    tracing.close
+    reporter.close
+    sender.close
+  }
 }
