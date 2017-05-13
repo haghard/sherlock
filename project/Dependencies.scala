@@ -1,7 +1,7 @@
 import sbt._
 
 object Dependencies {
-  val akkaVersion = "2.5.0"
+  val akkaVersion = "2.5.1"
 
   object Compile {
     val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
@@ -26,8 +26,8 @@ object Dependencies {
     //val akkaClusterManagement = "com.lightbend.akka" %% "akka-management-cluster-http" %  "0.2+20170418-2254"
     //val zipkin2 = "com.beachape" %% "zipkin-futures" % "0.2.1"
 
-    val all = Seq(akkaActor, akkaHttp, akkaHttp, akkaSprayJson,
-      akkaDistData, /*akkaClusterManagement,*/ slf4j, logback, ficus, akkaStreams) ++ Seq(opentracing, zipkinSender, brave)
+    val all = Seq(akkaActor, akkaHttp, akkaHttp, akkaSprayJson, akkaDistData, slf4j, logback,
+      ficus, akkaStreams) ++ Seq(opentracing, zipkinSender, brave) /*akkaClusterManagement,*/
 
   }
 

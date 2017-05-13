@@ -14,12 +14,12 @@ import scala.concurrent.duration._
 
 class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(system: ActorSystem) extends Serialization {
   val httpApiTracer = tracing.tracer
+  implicit val timeout: Timeout = 5.seconds
 
   val route: Route =
     pathPrefix("service") {
       path(Segments) { root ⇒
         get {
-          implicit val timeout: Timeout = 5.seconds
           //to give a chance to read from a local store
           complete {
             (registry ? ServiceRegistry.Get("/" + root.mkString("/"))).mapTo[Service.Result]
