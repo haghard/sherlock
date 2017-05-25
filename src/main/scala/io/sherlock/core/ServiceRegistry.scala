@@ -49,16 +49,12 @@ class ServiceRegistry extends Actor with ActorLogging {
       val serviceName = rootToName(hb.path)
       log.info(s"hb {} for {}", hb, serviceName)
       getOrCreateAndSubscribe(serviceName) ! m
-      registrySpan.finish()
+      registrySpan.finish
     case Get(path) ⇒
       val rootName = rootToName(path)
       log.info("Get root name:{}", rootName)
-      context.child(rootName) match {
-        case None ⇒
-          sender() ! Service.Result(Map.empty)
-        case Some(instance) ⇒
-          instance forward Service.GetAccuracy
-      }
+      context.child(rootName)
+        .fold(sender() ! Service.Result(Map.empty)) { instance ⇒ instance forward Service.GetAccuracy }
     case change @ Changed(DataKey) ⇒
       val data = change.get(DataKey)
       log.info(s"[Registry-Replication] by key:{} elements:[{}]", DataKey, data.elements.mkString(","))
