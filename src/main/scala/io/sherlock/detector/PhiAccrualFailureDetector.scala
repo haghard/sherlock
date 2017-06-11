@@ -6,7 +6,7 @@ object PhiAccrualFailureDetector {
   abstract class Clock extends (() ⇒ Long)
 
   val defaultClock: Clock = new Clock {
-    def apply(): Long = System.currentTimeMillis()
+    def apply(): Long = System.currentTimeMillis
   }
 }
 

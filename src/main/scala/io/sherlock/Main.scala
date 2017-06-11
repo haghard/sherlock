@@ -1,8 +1,12 @@
 package io.sherlock
 
-import akka.actor.{ ActorSystem, CoordinatedShutdown }
-import akka.cluster.Cluster
+import java.util.concurrent.atomic.AtomicReference
+
+import akka.actor.ActorSystem
+import akka.http.scaladsl.server.Route
+import akka.stream.scaladsl.Flow
 import brave.Tracing
+import io.sherlock.core.UniqueHostsStage
 import zipkin.reporter.AsyncReporter
 import zipkin.reporter.okhttp3.OkHttpSender
 
@@ -40,8 +44,23 @@ object Main extends App {
 
   val httpApi = new HttpApi(name, registry, tracing)(system).route
 
+  val routeFlow   = Route.handlerFlow(httpApi)
+  val hosts       = new AtomicReference(Set[String]())
+  val uniqueHosts = new UniqueHostsStage(hosts)
+  val httpGraph = Flow.fromGraph(uniqueHosts).via(routeFlow)
+
+  /*val httpGraph = Flow.fromGraph(GraphDSL.create() { implicit b =>
+        import GraphDSL.Implicits._
+        val req   = b.add(Flow[HttpRequest])
+        val http  = b.add(flow)
+        val hosts = b.add(uniqueHosts)
+        req ~> hosts ~> http
+        FlowShape(req.in, http.out)
+      })
+  */
+
   Http()
-    .bindAndHandle(httpApi, hostname, httpPort)
+    .bindAndHandle(httpGraph, hostname, httpPort)
     .onComplete {
       case scala.util.Success(_) ⇒
         println(s"seed-nodes: ${seedNodes.mkString(",")}")
