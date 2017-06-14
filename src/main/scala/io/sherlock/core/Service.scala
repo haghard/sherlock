@@ -68,7 +68,7 @@ class Service extends Actor with ActorLogging {
       data.elements.foreach(getOrCreate)
     case ModifyFailure(DataKey, error, cause, Some(replyTo: ActorRef)) ⇒
       log.error(cause, error)
-    // ReadMajority failure, try again with local read
+    // WriteMajority failure, try again with local read
     //replicator ! Update(DataKey, ORSet(), writeMajority /*WriteLocal*/ )(_ + serviceInstanceName)
     //context.actorOf(ServiceInstance.props, serviceInstanceName)
   }

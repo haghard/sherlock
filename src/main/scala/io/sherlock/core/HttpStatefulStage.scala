@@ -7,7 +7,7 @@ import akka.stream.stage._
 import akka.stream.{ Attributes, FlowShape, Inlet, Outlet }
 
 class UniqueHostsStage(val hosts: AtomicReference[Set[String]]) extends GraphStage[FlowShape[HttpRequest, HttpRequest]] {
-  val in  = Inlet[HttpRequest]("in")
+  val in = Inlet[HttpRequest]("in")
   val out = Outlet[HttpRequest]("out")
 
   override def shape = FlowShape.of(in, out)
@@ -40,8 +40,8 @@ class UniqueHostsStage(val hosts: AtomicReference[Set[String]]) extends GraphSta
 
           override def onPush(): Unit = {
             val nextReq = grab(in)
-            val host    = findHost(nextReq.headers)
-            host.foreach { h =>
+            val host = findHost(nextReq.headers)
+            host.foreach { h ⇒
               capture(hosts, h.host.address)
             }
             log.info(s"hosts: ${hosts.get().mkString(",")}")

@@ -44,8 +44,8 @@ object Main extends App {
 
   val httpApi = new HttpApi(name, registry, tracing)(system).route
 
-  val routeFlow   = Route.handlerFlow(httpApi)
-  val hosts       = new AtomicReference(Set[String]())
+  val routeFlow = Route.handlerFlow(httpApi)
+  val hosts = new AtomicReference(Set[String]())
   val uniqueHosts = new UniqueHostsStage(hosts)
   val httpGraph = Flow.fromGraph(uniqueHosts).via(routeFlow)
 
