@@ -41,10 +41,11 @@ class ServiceInstance extends Actor with ActorLogging {
       context become active
   }
 
+  import scala.concurrent.duration._
   def active: Receive = {
     case Service.GetAccuracy ⇒
       log.info("get-accuracy for service: {}", self.path.name)
-      replicator ! Replicator.Get(serviceInstanceDataKey, ReadLocal, Some(sender()))
+      replicator ! Replicator.Get(serviceInstanceDataKey, ReadMajority(1.second), Some(sender()))
     case g @ GetSuccess(`serviceInstanceDataKey`, Some(replyTo: ActorRef)) ⇒
       val data = g.get(serviceInstanceDataKey)
       val timestamps = data.elements.toList
