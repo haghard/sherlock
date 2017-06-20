@@ -3,7 +3,7 @@ package io.sherlock
 import java.util.concurrent.atomic.AtomicReference
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.{RequestContext, Route}
 import akka.stream.scaladsl.Flow
 import brave.Tracing
 import io.sherlock.core.UniqueHostsStage
@@ -43,6 +43,7 @@ object Main extends App {
     .reporter(reporter).build()
 
   val httpApi = new HttpApi(name, registry, tracing)(system).route
+
 
   val routeFlow = Route.handlerFlow(httpApi)
   val hosts = new AtomicReference(Set[String]())
