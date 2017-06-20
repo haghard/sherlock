@@ -14,7 +14,7 @@ object ServiceRegistry {
 
   def rootToName(root: String): String = root.replaceAll("/", "_")
 
-  def props = Props(new ServiceRegistry())
+  def props = Props(new ServiceRegistry)
 }
 
 class ServiceRegistry extends Actor with ActorLogging {
@@ -28,6 +28,8 @@ class ServiceRegistry extends Actor with ActorLogging {
 
   val replicator = DistributedData(context.system).replicator
   replicator ! Subscribe(DataKey, self)
+
+  //replicator ask GetReplicaCount ReplicaCount(n)
 
   override def preStart(): Unit =
     log.info("Start: {}", self.path.name)

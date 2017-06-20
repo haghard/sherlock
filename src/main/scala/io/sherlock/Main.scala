@@ -47,17 +47,7 @@ object Main extends App {
   val routeFlow = Route.handlerFlow(httpApi)
   val hosts = new AtomicReference(Set[String]())
   val uniqueHosts = new UniqueHostsStage(hosts)
-  val httpGraph = Flow.fromGraph(uniqueHosts).via(routeFlow)
-
-  /*val httpGraph = Flow.fromGraph(GraphDSL.create() { implicit b =>
-        import GraphDSL.Implicits._
-        val req   = b.add(Flow[HttpRequest])
-        val http  = b.add(flow)
-        val hosts = b.add(uniqueHosts)
-        req ~> hosts ~> http
-        FlowShape(req.in, http.out)
-      })
-  */
+  val httpGraph = (Flow.fromGraph(uniqueHosts) via routeFlow)
 
   Http()
     .bindAndHandle(httpGraph, hostname, httpPort)

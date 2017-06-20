@@ -1,7 +1,7 @@
 import sbt._
 
 object Dependencies {
-  val akkaVersion = "2.5.2"
+  val akkaVersion = "2.5.3"
 
   object Compile {
     val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
@@ -9,7 +9,7 @@ object Dependencies {
     val slf4j = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
     val logback = "ch.qos.logback"  %   "logback-classic" % "1.1.2"
 
-    val akkaHttp = "com.typesafe.akka" %% "akka-http" % "10.0.5"
+    val akkaHttp = "com.typesafe.akka" %% "akka-http" % "10.0.8"
     val akkaSprayJson = "com.typesafe.akka" %% "akka-http-spray-json" % "10.0.5"
     val ficus = "com.iheart" %% "ficus" % "1.4.0"
     val akkaStreams = "com.typesafe.akka" %% "akka-stream"  % akkaVersion
