@@ -2,8 +2,9 @@ package io.sherlock
 
 import java.util.concurrent.atomic.AtomicReference
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.server.{RequestContext, Route}
+import akka.actor.{ ActorRef, ActorSystem }
+import akka.http.scaladsl.model.HttpRequest
+import akka.http.scaladsl.server.{ RequestContext, Route }
 import akka.stream.scaladsl.Flow
 import brave.Tracing
 import io.sherlock.core.UniqueHostsStage
@@ -44,11 +45,19 @@ object Main extends App {
 
   val httpApi = new HttpApi(name, registry, tracing)(system).route
 
-
   val routeFlow = Route.handlerFlow(httpApi)
   val hosts = new AtomicReference(Set[String]())
   val uniqueHosts = new UniqueHostsStage(hosts)
+
+  implicit val t = akka.util.Timeout(3.seconds)
+
+  //val httpGraph = (Flow.fromGraph(check(null) /* uniqueHosts*/ ) via routeFlow)
   val httpGraph = (Flow.fromGraph(uniqueHosts) via routeFlow)
+
+  def check(src: ActorRef)(implicit t: akka.util.Timeout) = {
+    import akka.pattern.ask
+    Flow[HttpRequest].mapAsync(1) { req ⇒ (src ? 1).mapTo[Boolean].map(_ ⇒ req) }
+  }
 
   Http()
     .bindAndHandle(httpGraph, hostname, httpPort)
