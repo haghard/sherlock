@@ -7,7 +7,7 @@ import akka.http.scaladsl.model.HttpRequest
 import akka.http.scaladsl.server.{ RequestContext, Route }
 import akka.stream.scaladsl.Flow
 import brave.Tracing
-import io.sherlock.core.UniqueHostsStage
+import io.sherlock.core.{ ActorCache, CacheStage, UniqueHostsStage }
 import zipkin.reporter.AsyncReporter
 import zipkin.reporter.okhttp3.OkHttpSender
 
@@ -49,14 +49,18 @@ object Main extends App {
   val hosts = new AtomicReference(Set[String]())
   val uniqueHosts = new UniqueHostsStage(hosts)
 
-  implicit val t = akka.util.Timeout(3.seconds)
+  implicit val t = akka.util.Timeout(1.seconds)
 
-  //val httpGraph = (Flow.fromGraph(check(null) /* uniqueHosts*/ ) via routeFlow)
-  val httpGraph = (Flow.fromGraph(uniqueHosts) via routeFlow)
+  val cache = system.actorOf(ActorCache.props)
+  val stage = new CacheStage(cache)(t)
+
+  //val httpGraph = (Flow.fromGraph(check(cache)) via routeFlow)
+  //val httpGraph = (Flow.fromGraph(uniqueHosts) via routeFlow)
+  val httpGraph = (Flow.fromGraph(stage) via routeFlow)
 
   def check(src: ActorRef)(implicit t: akka.util.Timeout) = {
     import akka.pattern.ask
-    Flow[HttpRequest].mapAsync(1) { req ⇒ (src ? 1).mapTo[Boolean].map(_ ⇒ req) }
+    Flow[HttpRequest].mapAsync(4)(req ⇒ (src ? req).mapTo[HttpRequest])
   }
 
   Http()
