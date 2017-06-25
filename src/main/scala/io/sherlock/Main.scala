@@ -21,8 +21,11 @@ import io.sherlock.http.HttpApi
 import net.ceedubs.ficus.Ficus._
 import scala.concurrent.duration._
 
-object Main extends App {
+object Main extends App with OptsSupport {
   val version = "v0.0.1.RELEASE"
+  val opts = argsToOpts(args.toList)
+  applySystemProperties(opts)
+
   val conf = ConfigFactory.load()
   implicit val system = ActorSystem("sd", conf)
   implicit val materializer = ActorMaterializer.create(system)
@@ -50,7 +53,6 @@ object Main extends App {
   val uniqueHosts = new UniqueHostsStage(hosts)
 
   implicit val t = akka.util.Timeout(1.seconds)
-
   val cache = system.actorOf(ActorCache.props)
   val stage = new CacheStage(cache)(t)
 
