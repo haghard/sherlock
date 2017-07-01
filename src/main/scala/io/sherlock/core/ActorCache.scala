@@ -1,13 +1,13 @@
 package io.sherlock.core
 
-import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.http.scaladsl.model.headers.RawHeader
-import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.pattern.ask
-import akka.stream.scaladsl.{ Flow, GraphDSL }
+import akka.stream.scaladsl.{Flow, GraphDSL}
 import akka.stream.stage._
-import akka.stream.{ Attributes, FlowShape, Inlet, Outlet }
-import io.sherlock.core.ActorCache.{ Ans, Check }
+import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
+import io.sherlock.core.ActorCache.{Ans, Check}
 
 import scala.util._
 
@@ -44,7 +44,12 @@ class ActorCache extends Actor with ActorLogging {
   }
 }
 
+/*
+ * This stage extracts userId from path and validate it against the ActorCache
+ */
 class CacheStage(actor: ActorRef)(implicit t: akka.util.Timeout) extends GraphStage[FlowShape[HttpRequest, HttpRequest]] {
+  import akka.http.scaladsl.model._
+
   private val in = Inlet[HttpRequest]("in")
   private val out = Outlet[HttpRequest]("out")
 
@@ -52,11 +57,9 @@ class CacheStage(actor: ActorRef)(implicit t: akka.util.Timeout) extends GraphSt
 
   override val shape = FlowShape.of(in, out)
 
-  import akka.http.scaladsl.model._
-
   override def createLogic(atts: Attributes) =
     new GraphStageLogic(shape) with StageLogging {
-      var cb: AsyncCallback[Try[Ans]] = _
+      var callback: AsyncCallback[Try[Ans]] = _
 
       private def onResponse(res: Try[Ans]) = {
         res.fold({ ex ⇒
@@ -78,8 +81,8 @@ class CacheStage(actor: ActorRef)(implicit t: akka.util.Timeout) extends GraphSt
               case matcher(id, _) ⇒
                 val userId = id.toLong
                 log.info("id {} needs to be checked", userId)
-                cb = getAsyncCallback[Try[Ans]](onResponse)
-                (actor ? Check(req, userId)).mapTo[Ans].onComplete(cb.invoke)(materializer.executionContext)
+                callback = getAsyncCallback[Try[Ans]](onResponse)
+                (actor ? Check(req, userId)).mapTo[Ans].onComplete(callback.invoke)(materializer.executionContext)
               case _ ⇒ push(out, req)
             }
           } else push(out, req)

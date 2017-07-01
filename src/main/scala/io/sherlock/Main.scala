@@ -54,19 +54,19 @@ object Main extends App with OptsSupport {
 
   implicit val t = akka.util.Timeout(1.seconds)
   val cache = system.actorOf(ActorCache.props)
-  val stage = new CacheStage(cache)(t)
+  //val stage = new CacheStage(cache)(t)
 
   //val httpGraph = (Flow.fromGraph(check(cache)) via routeFlow)
   //val httpGraph = (Flow.fromGraph(uniqueHosts) via routeFlow)
-  val httpGraph = (Flow.fromGraph(stage) via routeFlow)
+  //val httpGraph = (Flow.fromGraph(stage) via routeFlow)
 
-  def check(src: ActorRef)(implicit t: akka.util.Timeout) = {
+  /*def check(src: ActorRef)(implicit t: akka.util.Timeout) = {
     import akka.pattern.ask
     Flow[HttpRequest].mapAsync(4)(req ⇒ (src ? req).mapTo[HttpRequest])
-  }
+  }*/
 
   Http()
-    .bindAndHandle(httpGraph, hostname, httpPort)
+    .bindAndHandle(routeFlow, hostname, httpPort)
     .onComplete {
       case scala.util.Success(_) ⇒
         println(s"seed-nodes: ${seedNodes.mkString(",")}")
