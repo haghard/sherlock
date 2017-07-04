@@ -2,12 +2,13 @@ package io.sherlock
 
 import java.util.concurrent.atomic.AtomicReference
 
-import akka.actor.{ ActorRef, ActorSystem }
+import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.model.HttpRequest
-import akka.http.scaladsl.server.{ RequestContext, Route }
+import akka.http.scaladsl.server.{RequestContext, Route}
 import akka.stream.scaladsl.Flow
 import brave.Tracing
-import io.sherlock.core.{ ActorCache, CacheStage, UniqueHostsStage }
+import io.sherlock.core.{ActorCache, CacheStage, UniqueHostsStage}
+import io.sherlock.stages.{BloomFilterStage, CacheStage}
 import zipkin.reporter.AsyncReporter
 import zipkin.reporter.okhttp3.OkHttpSender
 
@@ -54,11 +55,13 @@ object Main extends App with OptsSupport {
 
   implicit val t = akka.util.Timeout(1.seconds)
   val cache = system.actorOf(ActorCache.props)
-  //val stage = new CacheStage(cache)(t)
+  val stage = new CacheStage(cache)(t)
 
   //val httpGraph = (Flow.fromGraph(check(cache)) via routeFlow)
   //val httpGraph = (Flow.fromGraph(uniqueHosts) via routeFlow)
   //val httpGraph = (Flow.fromGraph(stage) via routeFlow)
+
+  //val httpGraph = (Flow.fromGraph(new BloomFilterStage()) via routeFlow)
 
   /*def check(src: ActorRef)(implicit t: akka.util.Timeout) = {
     import akka.pattern.ask
@@ -90,6 +93,6 @@ object Main extends App with OptsSupport {
     tracing.close
     reporter.close
     sender.close
-    Await.result(system.terminate(), 10.seconds)
+    Await.result(system.terminate, 10.seconds)
   }
 }
