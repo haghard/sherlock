@@ -2,13 +2,13 @@ package io.sherlock
 
 import java.util.concurrent.atomic.AtomicReference
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.{ ActorRef, ActorSystem }
 import akka.http.scaladsl.model.HttpRequest
-import akka.http.scaladsl.server.{RequestContext, Route}
+import akka.http.scaladsl.server.{ RequestContext, Route }
 import akka.stream.scaladsl.Flow
 import brave.Tracing
-import io.sherlock.core.{ActorCache, CacheStage, UniqueHostsStage}
-import io.sherlock.stages.{BloomFilterStage, CacheStage}
+import io.sherlock.core.{ ActorCache, UniqueHostsStage }
+import io.sherlock.stages.{ BloomFilterStage, CacheStage }
 import zipkin.reporter.AsyncReporter
 import zipkin.reporter.okhttp3.OkHttpSender
 
