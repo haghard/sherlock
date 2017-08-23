@@ -65,9 +65,11 @@ class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(system:
         } catch {
           case _: NumberFormatException ⇒
             complete(
-              HttpResponse(BadRequest,
-                entity = HttpEntity(`text/event-stream`,
-                "Integral number expected for Last-Event-ID header!".getBytes(java.nio.charset.StandardCharsets.UTF_8))))
+              HttpResponse(
+                BadRequest,
+                entity = HttpEntity(
+                  `text/event-stream`,
+                  "Integral number expected for Last-Event-ID header!".getBytes(java.nio.charset.StandardCharsets.UTF_8))))
         }
       }
     }
