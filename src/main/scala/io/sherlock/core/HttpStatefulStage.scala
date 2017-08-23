@@ -49,7 +49,6 @@ class UniqueHostsStage(val hosts: AtomicReference[Set[String]]) extends GraphSta
           }
 
           override def onPull() = pull(in)
-        }
-      )
+        })
     }
 }

@@ -17,8 +17,7 @@ object ActorCache {
 
   def flow(
     checkStage: GraphStage[FlowShape[HttpRequest, HttpRequest]],
-    http:       Flow[HttpRequest, HttpResponse, akka.NotUsed]
-  ) = {
+    http:       Flow[HttpRequest, HttpResponse, akka.NotUsed]) = {
     Flow.fromGraph(GraphDSL.create() { implicit b ⇒
       import GraphDSL.Implicits._
       val check = b.add(checkStage)

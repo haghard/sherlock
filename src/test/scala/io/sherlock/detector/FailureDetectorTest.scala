@@ -20,8 +20,7 @@ class FailureDetectorTest extends WordSpec with Matchers {
         System.currentTimeMillis - 3000,
         System.currentTimeMillis - 2000,
         System.currentTimeMillis - 1000,
-        System.currentTimeMillis
-      )
+        System.currentTimeMillis)
       implicit val defaultClock = new Clock {
         def apply() = NANOSECONDS.toMillis(System.nanoTime)
       }
