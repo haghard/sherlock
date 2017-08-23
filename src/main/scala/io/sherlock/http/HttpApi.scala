@@ -45,32 +45,29 @@ class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(system:
       }
     } ~ sseRoute
 
-  import akka.http.scaladsl.marshalling.sse.EventStreamMarshalling
   import akka.http.scaladsl.model.MediaTypes.`text/event-stream`
   import akka.http.scaladsl.model.StatusCodes.BadRequest
   import akka.http.scaladsl.model.headers.`Last-Event-ID`
   import akka.http.scaladsl.model.sse.ServerSentEvent
   import akka.http.scaladsl.marshalling.sse.EventStreamMarshalling._
 
-  def sse(size: Int): Route = {
+  def sse(size: Int, duration: FiniteDuration = 4.seconds): Route = {
     get {
       optionalHeaderValueByName(`Last-Event-ID`.name) { lastEventId ⇒
         try {
           val fromSeqNo = lastEventId.map(_.trim.toInt).getOrElse(0) + 1
           complete {
-            Source.tick(4.seconds, 4.seconds, 1)
+            Source.tick(duration, duration, fromSeqNo)
               .scan(fromSeqNo)((a, _) ⇒ a + 1)
               .map(timeToServerSentEvent(LocalTime.now, _))
-              .keepAlive(2.second, () ⇒ ServerSentEvent.heartbeat)
+              .keepAlive(duration / 2, () ⇒ ServerSentEvent.heartbeat)
           }
         } catch {
           case _: NumberFormatException ⇒
             complete(
-              HttpResponse(
-                BadRequest,
-                entity = HttpEntity(
-                  `text/event-stream`,
-                  "Integral number expected for Last-Event-ID header!".getBytes(java.nio.charset.StandardCharsets.UTF_8))))
+              HttpResponse(BadRequest,
+                entity = HttpEntity(`text/event-stream`,
+                "Integral number expected for Last-Event-ID header!".getBytes(java.nio.charset.StandardCharsets.UTF_8))))
         }
       }
     }
