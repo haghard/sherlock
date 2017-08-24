@@ -2,18 +2,20 @@ package io.sherlock.http
 
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import akka.actor.{ ActorRef, ActorSystem }
+
+import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
-import akka.http.scaladsl.model.{ HttpEntity, HttpResponse, StatusCodes }
+import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
 import brave.Tracing
-import io.sherlock.core.{ HeartBeat, HeartBeatTrace, Service, ServiceRegistry }
+import io.sherlock.core.{HeartBeat, HeartBeatTrace, Service, ServiceRegistry}
 
 import scala.concurrent.duration._
+import scala.util.Try
 
 class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(system: ActorSystem) extends Serialization {
   val httpApiTracer = tracing.tracer
@@ -51,26 +53,20 @@ class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(system:
   import akka.http.scaladsl.model.sse.ServerSentEvent
   import akka.http.scaladsl.marshalling.sse.EventStreamMarshalling._
 
+  //Route.handlerFlow(Flow.fromSinkAndSource(Sink.seq[HttpResponse], Source.empty[HttpRequest])
+
   def sse(size: Int, duration: FiniteDuration = 4.seconds): Route = {
     get {
       optionalHeaderValueByName(`Last-Event-ID`.name) { lastEventId ⇒
-        try {
-          val fromSeqNo = lastEventId.map(_.trim.toInt).getOrElse(0) + 1
-          complete {
-            Source.tick(duration, duration, fromSeqNo)
-              .scan(fromSeqNo)((a, _) ⇒ a + 1)
+        val src = Try(lastEventId.map(_.trim.toInt).getOrElse(0) + 1).fold({ ex =>
+          Source.single(ServerSentEvent("Integral number expected for Last-Event-ID header!"))
+        }, { fromSeqNum =>
+            Source.tick(duration, duration, fromSeqNum)
+              .scan(fromSeqNum)((a, _) ⇒ a + 1)
               .map(timeToServerSentEvent(LocalTime.now, _))
               .keepAlive(duration / 2, () ⇒ ServerSentEvent.heartbeat)
-          }
-        } catch {
-          case _: NumberFormatException ⇒
-            complete(
-              HttpResponse(
-                BadRequest,
-                entity = HttpEntity(
-                  `text/event-stream`,
-                  "Integral number expected for Last-Event-ID header!".getBytes(java.nio.charset.StandardCharsets.UTF_8))))
-        }
+        })
+        complete(src)
       }
     }
   }
