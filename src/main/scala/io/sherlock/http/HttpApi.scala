@@ -3,26 +3,29 @@ package io.sherlock.http
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.{ Actor, ActorLogging, ActorRef, ActorSystem, Props, Stash, Terminated }
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
-import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse, StatusCodes}
+import akka.http.scaladsl.marshalling.sse.EventStreamMarshalling._
+import akka.http.scaladsl.model.headers.`Last-Event-ID`
+import akka.http.scaladsl.model.sse.ServerSentEvent
+import akka.http.scaladsl.model.{ HttpResponse, StatusCodes }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.scaladsl.{ BroadcastHub, Keep, Sink, Source }
+import akka.stream.{ ActorMaterializer, ActorMaterializerSettings, OverflowStrategy }
 import akka.util.Timeout
 import brave.Tracing
-import io.sherlock.core.{HeartBeat, HeartBeatTrace, Service, ServiceRegistry}
+import io.sherlock.core.{ HeartBeat, HeartBeatTrace, Service, ServiceRegistry }
+import io.sherlock.stages.PubSubBasedSource
+import io.sherlock.stages.PubSubBasedSource.AssignStageActor
 
 import scala.concurrent.duration._
-import scala.util.Try
 
-class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(system: ActorSystem) extends Serialization {
+class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(implicit system: ActorSystem) extends Serialization {
   val httpApiTracer = tracing.tracer
   //to give a chance to read from a local store
   implicit val timeout: Timeout = 3.seconds
-
-  val sseRoute: Route = sse(20)
 
   val route: Route =
     pathPrefix("service") {
@@ -45,28 +48,99 @@ class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(system:
           }
         }
       }
-    } ~ sseRoute
+    } ~ sse(20) ~ liveSse() ~ liveSse2()
 
-  import akka.http.scaladsl.model.MediaTypes.`text/event-stream`
-  import akka.http.scaladsl.model.StatusCodes.BadRequest
-  import akka.http.scaladsl.model.headers.`Last-Event-ID`
-  import akka.http.scaladsl.model.sse.ServerSentEvent
-  import akka.http.scaladsl.marshalling.sse.EventStreamMarshalling._
+  /*
+  .fold({ ex ⇒
+    Source.single(ServerSentEvent("Integral number expected for Last-Event-ID header!"))
+  },
+  */
+  sealed trait Protocol {
+    def id: Int
+  }
 
-  //Route.handlerFlow(Flow.fromSinkAndSource(Sink.seq[HttpResponse], Source.empty[HttpRequest])
+  case class ProtocolA(id: Int) extends Protocol
+
+  case class ProtocolB(id: Int) extends Protocol
+
+  val pubSub = system.actorOf(Props(new Actor with Stash with ActorLogging {
+    def receive: Receive = {
+      case _: Int ⇒ stash()
+      case AssignStageActor(sseChannel: ActorRef) ⇒
+        unstashAll()
+        //DistributedPubSub() .subscribe (self)
+        context.watch(sseChannel)
+        context.become(receiveNew(sseChannel))
+    }
+
+    def receiveNew(sseChannel: ActorRef): Receive = {
+      case Terminated(`sseChannel`) ⇒
+        log.info("{} terminated ", sseChannel)
+        context.stop(self)
+      case msg: Int ⇒ // message from pub sub
+        log.info("publish")
+        sseChannel ! ProtocolA(msg)
+    }
+  }))
+
+  lazy val liveSseStream = {
+    //Source.tick(4.seconds, 4.seconds, 1)
+    system.scheduler.schedule(1.second, 300.millis)(pubSub ! 1)(system.dispatcher)
+
+    implicit val m = ActorMaterializer(ActorMaterializerSettings(system).withInputBuffer(1, 1))
+    val source = Source.fromGraph(new PubSubBasedSource[Protocol](pubSub))
+      .scan(0)((a, _) ⇒ a + 1)
+      .map(timeToServerSentEvent(LocalTime.now, _))
+      .keepAlive(4.seconds / 2, () ⇒ ServerSentEvent.heartbeat)
+      .toMat(BroadcastHub.sink(8))(Keep.right).run
+    source.runWith(Sink.ignore)
+    source
+  }
+
+  //The main disadvantage here being that you cannot catch an type cast error
+  lazy val liveSseStream2 = {
+    system.scheduler.schedule(1.second, 500.millis)(pubSub ! 1)(system.dispatcher)
+    implicit val d = system.dispatcher
+    val s = Source.actorRef[Int](1 << 8, OverflowStrategy.dropHead)
+      .scan(0)((a, _) ⇒ a + 1)
+      .map(timeToServerSentEvent(LocalTime.now, _))
+      .keepAlive(4.seconds / 2, () ⇒ ServerSentEvent.heartbeat)
+      .mapMaterializedValue { actor ⇒ pubSub ! AssignStageActor(actor) }
+      .watchTermination() { (_, termination) ⇒
+        termination.foreach { _ ⇒
+          println("************** sse-channel terminated")
+          akka.NotUsed
+        }
+      }
+    s
+  }
+
+  def liveSse(): Route =
+    path("live")(get(complete(liveSseStream)))
+
+  def liveSse2(): Route = {
+    path("live2") {
+      get {
+        complete {
+          liveSseStream2
+        }
+      }
+    }
+  }
 
   def sse(size: Int, duration: FiniteDuration = 4.seconds): Route = {
-    get {
-      optionalHeaderValueByName(`Last-Event-ID`.name) { lastEventId ⇒
-        val src = Try(lastEventId.map(_.trim.toInt).getOrElse(0) + 1).fold({ ex =>
-          Source.single(ServerSentEvent("Integral number expected for Last-Event-ID header!"))
-        }, { fromSeqNum =>
+    path("sse") {
+      get {
+        optionalHeaderValueByName(`Last-Event-ID`.name) { lastEventId ⇒
+          val fromSeqNum = lastEventId.map(_.trim.toInt).getOrElse(0) + 1
+          complete {
             Source.tick(duration, duration, fromSeqNum)
               .scan(fromSeqNum)((a, _) ⇒ a + 1)
               .map(timeToServerSentEvent(LocalTime.now, _))
               .keepAlive(duration / 2, () ⇒ ServerSentEvent.heartbeat)
-        })
-        complete(src)
+
+          }
+        }
       }
     }
   }

@@ -3,11 +3,12 @@ package io.sherlock
 import java.util.concurrent.atomic.AtomicReference
 
 import akka.actor.{ ActorRef, ActorSystem }
-import akka.http.scaladsl.model.HttpRequest
+import akka.http.scaladsl.model.{ HttpMethods, HttpRequest }
 import akka.http.scaladsl.server.{ RequestContext, Route }
 import akka.stream.scaladsl.Flow
 import brave.Tracing
 import io.sherlock.core.{ ActorCache, UniqueHostsStage }
+import io.sherlock.http.SwaggerApi
 import io.sherlock.stages.{ BloomFilterStage, CacheStage }
 import zipkin.reporter.AsyncReporter
 import zipkin.reporter.okhttp3.OkHttpSender
@@ -69,7 +70,7 @@ object Main extends App with OptsSupport {
   }*/
 
   Http()
-    .bindAndHandle(routeFlow, hostname, httpPort)
+    .bindAndHandle( /*new SwaggerApi().route*/ routeFlow, hostname, httpPort)
     .onComplete {
       case scala.util.Success(_) ⇒
         println(s"seed-nodes: ${seedNodes.mkString(",")}")

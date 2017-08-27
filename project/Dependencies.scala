@@ -30,9 +30,9 @@ object Dependencies {
 
     val algebird = "com.twitter" %% "algebird-core" % "0.13.0"
 
-    val all = Seq(akkaActor, akkaHttp, akkaHttp, akkaSprayJson, akkaDistData, slf4j, logback,
+    val swakka = "net.jtownson" %% "swakka" % "0.1a-SNAPSHOT"
+    val all = Seq(akkaActor, akkaHttp, akkaHttp, akkaSprayJson, akkaDistData, slf4j, logback, swakka,
       ficus, akkaStreams, algebird, jvmUtil) ++ Seq(opentracing, zipkinSender, brave, akkaClusterManagement) /*akkaClusterManagement,*/
-
   }
 
   object Test {
