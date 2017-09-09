@@ -2,6 +2,7 @@ import sbt._
 
 object Dependencies {
   val akkaVersion = "2.5.4"
+  val squbsVersion = "0.9.1"
 
   object Compile {
     val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
@@ -30,7 +31,12 @@ object Dependencies {
 
     val algebird = "com.twitter" %% "algebird-core" % "0.13.0"
 
+    //2.11
+    //val squbs    = "org.squbs" %% "squbs-pattern" % squbsVersion
+    //val chronicle = "net.openhft" % "chronicle-queue" % "4.5.13"
+
     val swakka = "net.jtownson" %% "swakka" % "0.1a-SNAPSHOT"
+
     val all = Seq(akkaActor, akkaHttp, akkaHttp, akkaSprayJson, akkaDistData, slf4j, logback, swakka,
       ficus, akkaStreams, algebird, jvmUtil) ++ Seq(opentracing, zipkinSender, brave, akkaClusterManagement) /*akkaClusterManagement,*/
   }

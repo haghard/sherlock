@@ -11,7 +11,14 @@ scalaVersion := "2.12.3"
 libraryDependencies ++= Dependencies.Compile.all
 libraryDependencies ++= Dependencies.Test.all
 
-//enablePlugins(JavaAppPackaging)
+resolvers ++= Seq(
+  Resolver.defaultLocal,
+  Resolver.mavenLocal,
+  Resolver.mavenCentral,
+  Resolver.sonatypeRepo("public"),
+  Resolver.sonatypeRepo("snapshots"),
+  Resolver.sonatypeRepo("releases"),
+  Resolver.typesafeRepo("releases"))
 
 updateOptions := updateOptions.value.withCachedResolution(true)
 
