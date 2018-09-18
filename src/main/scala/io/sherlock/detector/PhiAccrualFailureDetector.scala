@@ -5,9 +5,7 @@ import scala.concurrent.duration._
 object PhiAccrualFailureDetector {
   abstract class Clock extends (() ⇒ Long)
 
-  val defaultClock: Clock = new Clock {
-    def apply(): Long = System.currentTimeMillis
-  }
+  val defaultClock: Clock = () ⇒ System.currentTimeMillis
 }
 
 case class PhiAccrualFailureDetector(timestamps: IndexedSeq[Long])(implicit clock: PhiAccrualFailureDetector.Clock) {

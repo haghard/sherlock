@@ -3,20 +3,20 @@ package io.sherlock.http
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Stash, Terminated}
+import akka.actor.{ Actor, ActorLogging, ActorRef, ActorSystem, Props, Stash, Terminated }
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.marshalling.sse.EventStreamMarshalling._
 import akka.http.scaladsl.model.headers.`Last-Event-ID`
 import akka.http.scaladsl.model.sse.ServerSentEvent
-import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
+import akka.http.scaladsl.model.{ HttpResponse, StatusCodes }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import akka.stream.scaladsl.{BroadcastHub, Keep, RunnableGraph, Sink, Source}
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings, KillSwitches, OverflowStrategy}
+import akka.stream.scaladsl.{ BroadcastHub, Keep, RunnableGraph, Sink, Source }
+import akka.stream.{ ActorMaterializer, ActorMaterializerSettings, KillSwitches, OverflowStrategy }
 import akka.util.Timeout
 import brave.Tracing
-import io.sherlock.core.{HeartBeat, HeartBeatTrace, Service, ServiceRegistry}
+import io.sherlock.core.{ HeartBeat, HeartBeatTrace, Service, ServiceRegistry }
 import io.sherlock.stages.PubSubBasedSource
 import io.sherlock.stages.PubSubBasedSource.AssignStageActor
 
@@ -48,7 +48,7 @@ class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(implici
           }
         }
       }
-    } ~ sse(20) ~ liveSse() ~ liveSse2()
+    } //~ sse(20) ~ liveSse() ~ liveSse2()
 
   /*
   .fold({ ex ⇒
@@ -100,7 +100,6 @@ class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(implici
 
   private val killSwitch = KillSwitches.shared("ingestion-hub")
 
-
   /*def initIngestionHub[M](sink: Sink[DroneData, M]): M = {
     MergeHub.source[DroneData](perProducerBufferSize = 32)
       .via(killSwitch.flow)
@@ -110,7 +109,7 @@ class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(implici
 
   //The main disadvantage here being that you cannot catch an type cast error
   lazy val liveSseStream2 = {
-
+    implicit val m = ActorMaterializer(ActorMaterializerSettings(system).withInputBuffer(1, 1))
     system.scheduler.schedule(1.second, 500.millis)(pubSub ! 1)(system.dispatcher)
     implicit val d = system.dispatcher
     val s = Source.actorRef[Int](1 << 8, OverflowStrategy.dropHead)
@@ -118,7 +117,7 @@ class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(implici
       .map(timeToServerSentEvent(LocalTime.now, _))
       .keepAlive(4.seconds / 2, () ⇒ ServerSentEvent.heartbeat)
       .mapMaterializedValue { actor ⇒ pubSub ! AssignStageActor(actor) }
-      /*.watchTermination() { (_, termination) ⇒
+    /*.watchTermination() { (_, termination) ⇒
         termination.foreach { _ ⇒
           println("************** sse-channel terminated")
           akka.NotUsed

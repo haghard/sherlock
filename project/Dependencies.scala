@@ -1,7 +1,7 @@
 import sbt._
 
 object Dependencies {
-  val akkaVersion = "2.5.4"
+  val akkaVersion = "2.5.8"
   val squbsVersion = "0.9.1"
 
   object Compile {
@@ -35,9 +35,12 @@ object Dependencies {
     //val squbs    = "org.squbs" %% "squbs-pattern" % squbsVersion
     //val chronicle = "net.openhft" % "chronicle-queue" % "4.5.13"
 
-    val swakka = "net.jtownson" %% "swakka" % "0.1a-SNAPSHOT"
+    //val swakka = "net.jtownson" %% "swakka" % "0.1a-SNAPSHOT"
 
-    val all = Seq(akkaActor, akkaHttp, akkaHttp, akkaSprayJson, akkaDistData, slf4j, logback, swakka,
+    // li haoyi ammonite repl embed
+    val ammonite = "com.lihaoyi" % "ammonite" % "1.1.2" % "test" cross CrossVersion.full
+
+    val all = Seq(akkaActor, akkaHttp, akkaHttp, akkaSprayJson, akkaDistData, slf4j, logback, ammonite, /*swakka,*/
       ficus, akkaStreams, algebird, jvmUtil) ++ Seq(opentracing, zipkinSender, brave, akkaClusterManagement) /*akkaClusterManagement,*/
   }
 

@@ -8,6 +8,7 @@ trait OptsSupport {
 
   def applySystemProperties(options: Map[String, String]): Unit =
     for ((key, value) ← options if key startsWith "-D") {
+      println(s"SetProperty: ${key.substring(2)} - $value")
       System.setProperty(key substring 2, value)
     }
 }

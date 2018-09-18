@@ -25,6 +25,9 @@ import scala.concurrent.duration._
 
 object Main extends App with OptsSupport {
   val version = "v0.0.1.RELEASE"
+
+  println("****** " + args.toList.mkString(","))
+
   val opts = argsToOpts(args.toList)
   applySystemProperties(opts)
 
@@ -54,9 +57,11 @@ object Main extends App with OptsSupport {
   val hosts = new AtomicReference(Set[String]())
   val uniqueHosts = new UniqueHostsStage(hosts)
 
+  /*
   implicit val t = akka.util.Timeout(1.seconds)
   val cache = system.actorOf(ActorCache.props)
   val stage = new CacheStage(cache)(t)
+  */
 
   //val httpGraph = (Flow.fromGraph(check(cache)) via routeFlow)
   //val httpGraph = (Flow.fromGraph(uniqueHosts) via routeFlow)
