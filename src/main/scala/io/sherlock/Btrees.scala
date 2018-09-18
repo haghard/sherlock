@@ -63,16 +63,16 @@ object Btrees {
 
     def inOrder[B](f: T ⇒ B): Unit = {
       @annotation.tailrec
-      def go(tree: BTree[T], visitStack: List[BTree[T]], printStack: List[T], f: T ⇒ B): Unit =
+      def go(tree: BTree[T], visitStack: List[BTree[T]], delayedStack: List[T], f: T ⇒ B): Unit =
         tree match {
           case BNode(v, BLeaf, r) ⇒
             f(v)
-            printStack.foreach(f)
+            delayedStack.foreach(f)
             go(r, visitStack, Nil, f)
           case BNode(v, l, r) ⇒
             val (stack0, toPrint0) = r match {
-              case n: BNode[T] ⇒ (n :: visitStack, v :: printStack)
-              case BLeaf       ⇒ (visitStack, v :: printStack)
+              case n: BNode[T] ⇒ (n :: visitStack, v :: delayedStack)
+              case BLeaf       ⇒ (visitStack, v :: delayedStack)
             }
             go(l, stack0, toPrint0, f)
           case _ ⇒
@@ -85,7 +85,7 @@ object Btrees {
           f(v)
           go(r, Nil, Nil, f)
         case _ ⇒
-          //f(null.asInstanceOf[T])
+        //f(null.asInstanceOf[T])
       }
     }
 
