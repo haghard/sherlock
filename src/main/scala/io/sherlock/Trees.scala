@@ -144,34 +144,16 @@ object Trees {
     ins(tree)
   }
 
-  //root is black
-  //val root = Node(Leaf, Black(1), Leaf)
-  //val myTree = (2 to 1024).foldLeft[RBTree[Int]](root)((acc, i) => insert(i, acc))
 
-  val size = 512
-  val root: RBTree[Int] = Node(Leaf, Black(size / 2), Leaf)
+  //this tree doesn't work, smth is wrong with balancing. USE io.sherlock.RBTree
+
+  val size = 500
+  val root: RBTree[Int] = Node(Leaf, Black(0), Leaf)
   val entries = scala.util.Random.shuffle((1 to size).toVector)
   val myTree = entries.foldLeft(root)((acc, i) ⇒ insert(i, acc))
   entries.foldLeft(0) { (acc, i) ⇒ math.max(acc, contains(i, myTree)._2.toInt) }
   entries.foldLeft(0) { (acc, i) ⇒ if (acc == 0) contains(i, myTree)._2.toInt else math.min(acc, contains(i, myTree)._2.toInt) }
 
-  //no red node has a red child
-  //(0 to 64).foldLeft(root)((acc, _) ⇒ insert(ThreadLocalRandom.current().nextInt(0, 512), acc))
-
-  val rt = myTree.asInstanceOf[Node[Int]]
-  rt.elem
-
-  val a = rt.left.asInstanceOf[Node[Int]]
-  val b = rt.right.asInstanceOf[Node[Int]]
-  a.elem
-  a.left.asInstanceOf[Node[Int]].elem
-  a.right.asInstanceOf[Node[Int]].elem
-
-  b.elem
-  b.left.asInstanceOf[Node[Int]].elem
-  b.right.asInstanceOf[Node[Int]].elem
-
-  //contains(1, myTree)
 
   import com.abahgat.suffixtree.GeneralizedSuffixTree
   val suffixTree = new GeneralizedSuffixTree()

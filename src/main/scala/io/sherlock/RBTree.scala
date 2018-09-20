@@ -57,30 +57,30 @@ abstract sealed class RBTree[+A <% Ordered[A]] {
    * Time - O(log n)
    * Space - O(log n)
    */
-  def add[B >: A <% Ordered[B]](x: B): RBTree[B] = {
+  def :+[B >: A <% Ordered[B]](x: B): RBTree[B] = {
     def balancedAdd(t: RBTree[A]): RBTree[B] =
-      if (t.isEmpty) RBTree.make(Red, x)
+      if (t.isEmpty) RBTree.single(Red, x)
       else if (x < t.value) balanceLeft(t.color, t.value, balancedAdd(t.left), t.right)
       else if (x > t.value) balanceRight(t.color, t.value, t.left, balancedAdd(t.right))
       else t
 
     def balanceLeft(c: Color, x: A, l: RBTree[B], r: RBTree[A]) = (c, l, r) match {
       case (Black, Branch(Red, y, Branch(Red, z, a, b), c), d) ⇒
-        RBTree.make(Red, y, RBTree.make(Black, z, a, b), RBTree.make(Black, x, c, d))
+        RBTree.single(Red, y, RBTree.single(Black, z, a, b), RBTree.single(Black, x, c, d))
       case (Black, Branch(Red, z, a, Branch(Red, y, b, c)), d) ⇒
-        RBTree.make(Red, y, RBTree.make(Black, z, a, b), RBTree.make(Black, x, c, d))
-      case _ ⇒ RBTree.make(c, x, l, r)
+        RBTree.single(Red, y, RBTree.single(Black, z, a, b), RBTree.single(Black, x, c, d))
+      case _ ⇒ RBTree.single(c, x, l, r)
     }
 
     def balanceRight(c: Color, x: A, l: RBTree[A], r: RBTree[B]) = (c, l, r) match {
       case (Black, a, Branch(Red, y, b, Branch(Red, z, c, d))) ⇒
-        RBTree.make(Red, y, RBTree.make(Black, x, a, b), RBTree.make(Black, z, c, d))
+        RBTree.single(Red, y, RBTree.single(Black, x, a, b), RBTree.single(Black, z, c, d))
       case (Black, a, Branch(Red, z, Branch(Red, y, b, c), d)) ⇒
-        RBTree.make(Red, y, RBTree.make(Black, x, a, b), RBTree.make(Black, z, c, d))
-      case _ ⇒ RBTree.make(c, x, l, r)
+        RBTree.single(Red, y, RBTree.single(Black, x, a, b), RBTree.single(Black, z, c, d))
+      case _ ⇒ RBTree.single(c, x, l, r)
     }
 
-    def blacken(t: RBTree[B]) = RBTree.make(Black, t.value, t.left, t.right)
+    def blacken(t: RBTree[B]) = RBTree.single(Black, t.value, t.left, t.right)
 
     blacken(balancedAdd(this))
   }
@@ -133,7 +133,7 @@ object RBTree {
    */
   def empty[A]: RBTree[A] = Leaf
 
-  def make[A <% Ordered[A]](c: Color, x: A, l: RBTree[A] = Leaf, r: RBTree[A] = Leaf): RBTree[A] =
+  def single[A <% Ordered[A]](c: Color, x: A, l: RBTree[A] = Leaf, r: RBTree[A] = Leaf): RBTree[A] =
     Branch(c, x, l, r)
 
   /**
@@ -144,14 +144,15 @@ object RBTree {
    */
   def apply[A <% Ordered[A]](xs: Seq[A]): RBTree[A] = {
     var r: RBTree[A] = Leaf
-    for (x ← xs) r = r.add(x)
+    for (x ← xs) r = r :+ x
     r
   }
 
   val size = 500
   val entries = (1 to size).toList
-  val tree = entries.foldLeft(RBTree.make(Black, 0))(_.add(_))
+  val tree = entries.foldLeft(RBTree.single(Black, 0))(_ :+ _)
   entries.foldLeft(0l) { (acc, i) ⇒ math.max(acc, tree.contains(i)._2) }
+
   //t.contains(11)
 
 }
