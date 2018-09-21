@@ -8,7 +8,7 @@ import akka.http.scaladsl.server.{ RequestContext, Route }
 import akka.stream.scaladsl.Flow
 import brave.Tracing
 import io.sherlock.core.{ ActorCache, UniqueHostsStage }
-import io.sherlock.http.SwaggerApi
+//import io.sherlock.http.SwaggerApi
 import io.sherlock.stages.{ BloomFilterStage, CacheStage }
 import zipkin.reporter.AsyncReporter
 import zipkin.reporter.okhttp3.OkHttpSender

@@ -6,7 +6,7 @@ import scalariform.formatter.preferences._
 name := "sherlock"
 version := "0.0.1"
 
-scalaVersion := "2.12.3"
+scalaVersion := "2.12.6"
 
 libraryDependencies ++= Dependencies.Compile.all
 libraryDependencies ++= Dependencies.Test.all

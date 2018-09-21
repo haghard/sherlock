@@ -40,8 +40,9 @@ object Dependencies {
     // li haoyi ammonite repl embed
     val ammonite = "com.lihaoyi" % "ammonite" % "1.1.2" % "test" cross CrossVersion.full
 
+    
     val all = Seq(akkaActor, akkaHttp, akkaHttp, akkaSprayJson, akkaDistData, slf4j, logback, ammonite, /*swakka,*/
-      ficus, akkaStreams, algebird, jvmUtil) ++ Seq(opentracing, zipkinSender, brave, akkaClusterManagement) /*akkaClusterManagement,*/
+      ficus, akkaStreams, algebird, jvmUtil) ++ Seq(opentracing, zipkinSender, brave, akkaClusterManagement)
   }
 
   object Test {

@@ -144,7 +144,6 @@ object Trees {
     ins(tree)
   }
 
-
   //this tree doesn't work, smth is wrong with balancing. USE io.sherlock.RBTree
 
   val size = 500
@@ -153,7 +152,6 @@ object Trees {
   val myTree = entries.foldLeft(root)((acc, i) ⇒ insert(i, acc))
   entries.foldLeft(0) { (acc, i) ⇒ math.max(acc, contains(i, myTree)._2.toInt) }
   entries.foldLeft(0) { (acc, i) ⇒ if (acc == 0) contains(i, myTree)._2.toInt else math.min(acc, contains(i, myTree)._2.toInt) }
-
 
   import com.abahgat.suffixtree.GeneralizedSuffixTree
   val suffixTree = new GeneralizedSuffixTree()
