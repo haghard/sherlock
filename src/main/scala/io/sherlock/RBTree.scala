@@ -50,9 +50,7 @@ abstract sealed class RBTree[+A <% Ordered[A]] {
   def isEmpty: Boolean
 
   /**
-   * Adds given element 'x' into this tree.
-   *
-   * Exercise 3.10a @ PFDS.
+   * Adds the given element into this tree.
    *
    * Time - O(log n)
    * Space - O(log n)

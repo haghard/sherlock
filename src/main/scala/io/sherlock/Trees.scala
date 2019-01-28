@@ -1,23 +1,21 @@
 package io.sherlock
 
 object Trees {
+
   case class Tree[T](value: T, children: List[Tree[T]] = Nil)
 
-  def traverse[T](t: Tree[T]): Stream[T] = {
+  def lazyTraverseDF[T](t: Tree[T]): Stream[T] =
     t.value #:: t.children.foldLeft(Stream.empty[T]) { (acc, el) ⇒
-      if (el.children == Nil) println(el.value)
-      acc #::: traverse(el)
+      acc #::: lazyTraverseDF(el)
     }
-  }
 
-  def traverse2[T](t: Tree[T], depth: Int = 0): Stream[(T, Int)] = {
+  def traverseWithDepth[T](t: Tree[T], depth: Int = 0): Stream[(T, Int)] =
     (t.value, depth) #:: t.children.foldLeft(Stream.empty[(T, Int)]) { (acc, el) ⇒
-      acc #::: traverse2(el, depth + 1)
+      acc #::: traverseWithDepth(el, depth + 1)
     }
-  }
 
   //Depth first - Pre order
-  def dfs3[A, U](root: Tree[A])(f: A ⇒ U): Unit = {
+  def traverseDF[A, U](tree: Tree[A])(f: A ⇒ U): Unit = {
     @annotation.tailrec
     def loop(current: Tree[A], next: List[Tree[A]]): Unit = {
       f(current.value)
@@ -29,20 +27,41 @@ object Trees {
           if (next.isEmpty) () else loop(next.head, next.tail)
       }
     }
-    f(root.value)
-    root.children.foreach(loop(_, Nil))
+
+    f(tree.value)
+    tree.children.foreach(loop(_, Nil))
+  }
+
+  def traverseDF2[A, U](tree: Tree[A])(f: A ⇒ U): Unit = {
+    @annotation.tailrec
+    def loop(current: Tree[A], next: List[Tree[A]]): Unit = {
+      f(current.value)
+      //println(" - " + predecessors.mkString(","))
+      current.children match {
+        case head :: tail ⇒
+          loop(head, next ::: tail)
+        case Nil ⇒
+          if (next.isEmpty) () else loop(next.head, next.tail)
+      }
+    }
+
+    f(tree.value)
+    tree.children.foreach(loop(_, Nil))
   }
 
   //val t = Tree("root", Tree("a", Tree("a0") ::  Tree("a1") :: Nil) :: Tree("b") :: Tree("c") :: Nil)
   val t =
     Tree(
       "root",
-      (Tree("b", Tree("b10") :: Tree("b11", Tree("b20") :: Tree("b21") :: Nil) :: Nil) ::
-        Tree("c", Tree("c1") :: Tree("c2") :: Nil) ::
-        Tree("d", Tree("d1") :: Tree("d2") :: Tree("d3") :: Nil) :: Nil))
-  dfs3(t)(println(_))
+      (Tree("a", Tree("a5") :: Tree("a10", Tree("a11") :: Tree("a12") :: Nil) :: Nil) ::
+        Tree("b", Tree("b1") :: Tree("b2") :: Nil) ::
+        Tree("c", Tree("c1") :: Tree("c2") :: Tree("c3") :: Nil) :: Nil))
 
-  traverse(t) take 25 foreach println
+  traverseDF(t)(println(_))
+
+  lazyTraverseDF(t) take 25 foreach println
+
+  traverseWithDepth(t) take 25 foreach println
 
   //Red-black tree - is a balanced binary search tree
   //inv 1: No red node has a red child
@@ -69,6 +88,7 @@ object Trees {
 
   sealed trait Color[+A] {
     def elem: A
+
     def isRed: Boolean
 
     private def fold[T](fa: A ⇒ T, fb: A ⇒ T): T =
@@ -76,15 +96,19 @@ object Trees {
 
     def element: A = fold(identity, identity)
   }
+
   case class Red[+A](elem: A) extends Color[A] {
     override val isRed: Boolean = true
   }
+
   case class Black[+A](elem: A) extends Color[A] {
     override val isRed: Boolean = false
   }
 
   trait RBTree[+A]
+
   case object Leaf extends RBTree[Nothing]
+
   case class Node[+A](left: RBTree[A], elem: Color[A], right: RBTree[A]) extends RBTree[A]
 
   def find[A](element: A, tree: RBTree[A], cnt: Long = 0l)(implicit ord: Ordering[A]): (Option[A], Long) = {
@@ -127,6 +151,7 @@ object Trees {
           else tree
       }
     }
+
     // result is always the same
     def balance(left: RBTree[A], c: Color[A], right: RBTree[A]): RBTree[A] = {
       (left, c, right) match {
@@ -141,6 +166,7 @@ object Trees {
         case _ ⇒ Node(left, c, right)
       }
     }
+
     ins(tree)
   }
 
@@ -154,6 +180,7 @@ object Trees {
   entries.foldLeft(0) { (acc, i) ⇒ if (acc == 0) contains(i, myTree)._2.toInt else math.min(acc, contains(i, myTree)._2.toInt) }
 
   import com.abahgat.suffixtree.GeneralizedSuffixTree
+
   val suffixTree = new GeneralizedSuffixTree()
 
   suffixTree.put("cacao", 0)
