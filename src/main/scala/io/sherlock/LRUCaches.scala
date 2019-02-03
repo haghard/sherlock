@@ -117,14 +117,12 @@ object LRUCaches {
     }
 
     override def toString: String = {
-      def loop(it: java.util.Iterator[K], sb: mutable.StringBuilder,
-               first: Boolean = false): String = {
+      def loop(it: java.util.Iterator[K], sb: mutable.StringBuilder, first: Boolean = false): String = {
         if (it.hasNext)
           if (first) loop(it, sb.append(it.next))
           else loop(it, sb.append(",").append(it.next))
         else sb.toString
       }
-
       loop(data.keySet.iterator, new mutable.StringBuilder, true)
     }
   }
