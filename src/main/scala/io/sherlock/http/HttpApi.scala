@@ -17,8 +17,8 @@ import akka.stream.{ ActorMaterializer, ActorMaterializerSettings, KillSwitches,
 import akka.util.Timeout
 import brave.Tracing
 import io.sherlock.core.{ HeartBeat, HeartBeatTrace, Service, ServiceRegistry }
-import io.sherlock.stages.PubSubBasedSource
-import io.sherlock.stages.PubSubBasedSource.AssignStageActor
+import io.sherlock.stages.ActorBasedSource
+import io.sherlock.stages.ActorBasedSource.{ AssignStageActor, FailStage }
 
 import scala.concurrent.duration._
 
@@ -48,13 +48,8 @@ class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(implici
           }
         }
       }
-    } //~ sse(20) ~ liveSse() ~ liveSse2()
+    }
 
-  /*
-  .fold({ ex ⇒
-    Source.single(ServerSentEvent("Integral number expected for Last-Event-ID header!"))
-  },
-  */
   sealed trait Protocol {
     def id: Int
   }
@@ -89,7 +84,7 @@ class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(implici
 
     //one-to-many
     implicit val m = ActorMaterializer(ActorMaterializerSettings(system).withInputBuffer(1, 1))
-    val source = Source.fromGraph(new PubSubBasedSource[Protocol](pubSub))
+    val source = Source.fromGraph(new ActorBasedSource[Protocol](pubSub, 1 << 5, FailStage))
       .scan(0)((a, _) ⇒ a + 1)
       .map(timeToServerSentEvent(LocalTime.now, _))
       .keepAlive(4.seconds / 2, () ⇒ ServerSentEvent.heartbeat)

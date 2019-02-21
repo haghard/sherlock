@@ -1,7 +1,7 @@
 import sbt._
 
 object Dependencies {
-  val akkaVersion = "2.5.18"
+  val akkaVersion = "2.5.21"
   val squbsVersion = "0.9.1"
 
   object Compile {
@@ -31,6 +31,23 @@ object Dependencies {
 
     val algebird = "com.twitter" %% "algebird-core" % "0.13.0"
 
+    /*
+      Cassandra Version 1.1.1 uses SnapTree (https://github.com/nbronson/snaptree) for MemTable representation,
+      which claims to be "A drop-in replacement for ConcurrentSkipListMap, with the additional guarantee that clone()
+      is atomic and iteration has snapshot isolation
+    */
+    val snaptree = "edu.stanford.ppl" % "snaptree" % "0.1" //0.2
+
+    /*
+    FingerTree is an immutable sequence data structure in Scala programming language, offering O(1) prepend and
+    append, as well as a range of other useful properties [^1]. Finger trees can be used as building blocks for
+    queues, double-ended queues, priority queues, indexed and summed sequences.
+    */
+    val fingertree = "de.sciss" %% "fingertree" % "1.5.4"
+
+    //https://medium.com/@AlirezaMeskin/implementing-immutable-trie-in-scala-c0ab58fd401
+    val radixtree = "com.rklaehn" %% "radixtree" % "0.5.0"
+
     //2.11
     //val squbs    = "org.squbs" %% "squbs-pattern" % squbsVersion
     //val chronicle = "net.openhft" % "chronicle-queue" % "4.5.13"
@@ -40,8 +57,10 @@ object Dependencies {
     // li haoyi ammonite repl embed
     //  val ammonite = "com.lihaoyi" % "ammonite" % "1.1.2" % "test" cross CrossVersion.full
 
-    val all = Seq(akkaActor, akkaHttp, akkaHttp, akkaSprayJson, akkaDistData, slf4j, logback, /*ammonite,*/ /*swakka,*/
-      ficus, akkaStreams, algebird, jvmUtil) ++ Seq(opentracing, zipkinSender, brave, akkaClusterManagement)
+    val all = Seq(akkaActor, akkaHttp, akkaHttp, akkaSprayJson, akkaDistData, slf4j, logback, snaptree,
+      fingertree, radixtree,
+      /*ammonite,*/ /*swakka,*/
+      ficus, akkaStreams, algebird, jvmUtil) ++ Seq(opentracing, zipkinSender, brave /*, akkaClusterManagement*/ )
   }
 
   object Test {

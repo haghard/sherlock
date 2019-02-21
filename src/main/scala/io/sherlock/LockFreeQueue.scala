@@ -13,7 +13,7 @@ class LockFreeQueue[T] {
   private val zero = NodeRef[T](null.asInstanceOf[T])
 
   private val head = new AtomicReference[NodeRef[T]](zero)
-  private val tail = new AtomicReference[NodeRef[T]](zero)
+  private val tail = new AtomicReference[NodeRef[T]](head.get)
 
   @scala.annotation.tailrec
   private final def lookFreeEnqLoop(node: NodeRef[T]): Unit = {

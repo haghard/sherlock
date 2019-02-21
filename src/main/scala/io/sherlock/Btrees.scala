@@ -4,24 +4,25 @@ import scala.collection.mutable.ArrayBuffer
 
 object Btrees {
 
-  trait BTree[+T]
+  trait ImmutableBTree[+T]
 
-  case object BLeaf extends BTree[Nothing]
+  case object BLeaf extends ImmutableBTree[Nothing]
 
-  case class BNode[T](value: T, left: BTree[T], right: BTree[T]) extends BTree[T]
+  case class BNode[T](value: T, left: ImmutableBTree[T], right: ImmutableBTree[T]) extends ImmutableBTree[T]
 
-  implicit class TreeSyntax[T](self: BTree[T])(implicit ord: scala.math.Ordering[T]) {
-    @scala.annotation.tailrec private def search(searched: T, t: BTree[T], n: Long = 0): (Option[T], Long) = t match {
-      case BLeaf                           ⇒ (None, n)
-      case BNode(v, _, _) if searched == v ⇒ (Option(v), n)
-      case BNode(v, left, right) ⇒
-        if (ord lt (searched, v)) search(searched, left, n + 1)
-        else search(searched, right, n + 1)
-    }
+  implicit class TreeSyntax[T](self: ImmutableBTree[T])(implicit ord: scala.math.Ordering[T]) {
+    @scala.annotation.tailrec private def search(searched: T, t: ImmutableBTree[T], n: Long = 0): (Option[T], Long) =
+      t match {
+        case BLeaf                           ⇒ (None, n)
+        case BNode(v, _, _) if searched == v ⇒ (Option(v), n)
+        case BNode(v, left, right) ⇒
+          if (ord lt (searched, v)) search(searched, left, n + 1)
+          else search(searched, right, n + 1)
+      }
 
     def foreach[B](f: T ⇒ B): Unit = {
       @annotation.tailrec
-      def go(tree: BTree[T], stack: List[BTree[T]], f: T ⇒ B, n: Long = 0): Unit =
+      def go(tree: ImmutableBTree[T], stack: List[ImmutableBTree[T]], f: T ⇒ B, n: Long = 0): Unit =
         tree match {
           case BNode(v, l, r @ BNode(_, _, _)) ⇒
             val stack0 = r :: stack
@@ -42,7 +43,7 @@ object Btrees {
 
     def preOrder[B](f: T ⇒ B): Unit = {
       @annotation.tailrec
-      def go(tree: BTree[T], rest: ArrayBuffer[BTree[T]], f: T ⇒ B, n: Long = 0): Unit =
+      def go(tree: ImmutableBTree[T], rest: ArrayBuffer[ImmutableBTree[T]], f: T ⇒ B, n: Long = 0): Unit =
         tree match {
           case BNode(v, l, r @ BNode(_, _, _)) ⇒
             rest += r
@@ -55,15 +56,16 @@ object Btrees {
             go(l, rest, f, n + 1)
           case _ ⇒
             if (rest.size > 0) go(rest.head, rest.tail, f, n)
-            else println(n)
+            else () //println(n)
         }
 
       go(self, new ArrayBuffer(1 << 7), f, 0)
     }
 
+    //incorrect
     def inOrder[B](f: T ⇒ B): Unit = {
       @annotation.tailrec
-      def go(tree: BTree[T], visitStack: List[BTree[T]], delayedStack: List[T], f: T ⇒ B): Unit =
+      def go(tree: ImmutableBTree[T], visitStack: List[ImmutableBTree[T]], delayedStack: List[T], f: T ⇒ B): Unit =
         tree match {
           case BNode(v, BLeaf, r) ⇒
             f(v)
@@ -76,7 +78,8 @@ object Btrees {
             }
             go(l, stack0, toPrint0, f)
           case _ ⇒
-            if (visitStack.size > 0) go(visitStack.head, visitStack.tail, Nil, f)
+            if (visitStack.size > 0)
+              go(visitStack.head, visitStack.tail, Nil, f)
         }
 
       self match {
@@ -89,7 +92,7 @@ object Btrees {
       }
     }
 
-    private def loop(v: T, t: BTree[T]): T = t match {
+    private def loop(v: T, t: ImmutableBTree[T]): T = t match {
       case BLeaf ⇒ v
       case BNode(v, left, right) ⇒
         val l = loop(v, left)
@@ -97,41 +100,43 @@ object Btrees {
         if (ord lt (l, r)) r else l
     }
 
-    def max: T = loop(null.asInstanceOf[T], self)
+    def max: T =
+      loop(null.asInstanceOf[T], self)
 
-    def lookup(elem: T): (Option[T], Long) =
+    def find(elem: T): (Option[T], Long) =
       search(elem, self)
 
-    def :+(v: T): BTree[T] = (v, self) match {
-      case (value, BLeaf) ⇒
-        BNode(value, BLeaf, BLeaf)
-      case (candidate, BNode(a, left, right)) if candidate == a ⇒
-        BNode(candidate, left, right)
-      case (candidate, BNode(a, left, right)) if ord.lt(candidate, a) ⇒
-        BNode(a, left :+ candidate, right)
-      case (candidate, BNode(a, left, right)) if ord.gt(candidate, a) ⇒
-        BNode(a, left, right :+ candidate)
+    def :+(v: T): ImmutableBTree[T] = (v, self) match {
+      case (cValue, BLeaf) ⇒
+        BNode(cValue, BLeaf, BLeaf)
+      case (cValue, BNode(a, left, right)) ⇒
+        if (ord.lt(cValue, a))
+          BNode(a, left :+ cValue, right)
+        else if (ord.gt(cValue, a))
+          BNode(a, left, right :+ cValue)
+        else // ==
+          BNode(cValue, left, right)
     }
   }
 
   val size = 500
-  val root: BTree[Int] = BNode(size / 2, BLeaf, BLeaf)
+  val root: ImmutableBTree[Int] = BNode(size / 2, BLeaf, BLeaf)
   val entries = scala.util.Random.shuffle((1 to size).toList)
-  val myTree: BTree[Int] = entries.foldLeft(root)((acc, i) ⇒ acc :+ i)
-  entries.foldLeft(0) { (acc, i) ⇒ math.max(acc, myTree.lookup(i)._2.toInt) }
+  val myTree: ImmutableBTree[Int] = entries.foldLeft(root)((acc, i) ⇒ acc :+ i)
+  entries.foldLeft(0) { (acc, i) ⇒ math.max(acc, myTree.find(i)._2.toInt) }
 
   myTree.foreach(println(_))
 
-  val r: BTree[Int] = BNode(13, BLeaf, BLeaf)
+  val r: ImmutableBTree[Int] = BNode(13, BLeaf, BLeaf)
   val t = r :+ 8 :+ 17 :+ 4 :+ 6 :+ 5 :+ 7
   t.foreach(print(_))
   t.preOrder(print(_))
   //t.inOrder(println(_))
 
   val balancedTree = r :+ 6 :+ 17 :+ 5 :+ 7 :+ 4 :+ 8 :+ 20 :+ 18 :+ 25 :+ 22
-  balancedTree.foreach(print(_))
-  balancedTree.preOrder(print(_))
-  balancedTree.inOrder(d ⇒ print(s"$d,"))
+  balancedTree.foreach(e ⇒ print(e + ","))
+  balancedTree.preOrder(e ⇒ print(e + ","))
+  balancedTree.inOrder(e ⇒ print(e + ","))
 
   /*
   BNode(13,
