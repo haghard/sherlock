@@ -10,7 +10,8 @@ object Btrees {
 
   case class BNode[T](value: T, left: ImmutableBTree[T], right: ImmutableBTree[T]) extends ImmutableBTree[T]
 
-  implicit class TreeSyntax[T](self: ImmutableBTree[T])(implicit ord: scala.math.Ordering[T]) {
+  implicit class TreeSyntax[T](val self: ImmutableBTree[T])(implicit ord: scala.math.Ordering[T]) /*extends AnyVal*/ {
+
     @scala.annotation.tailrec private def search(searched: T, t: ImmutableBTree[T], n: Long = 0): (Option[T], Long) =
       t match {
         case BLeaf                           ⇒ (None, n)

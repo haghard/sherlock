@@ -1,5 +1,3 @@
-import scalariform.formatter.preferences._
-import com.typesafe.sbt.SbtScalariform
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import scalariform.formatter.preferences._
 
@@ -18,18 +16,19 @@ resolvers ++= Seq(
   Resolver.sonatypeRepo("public"),
   Resolver.sonatypeRepo("snapshots"),
   Resolver.sonatypeRepo("releases"),
-  Resolver.typesafeRepo("releases"))
+  Resolver.typesafeRepo("releases"),
+  "Hyperreal Repository" at "https://dl.bintray.com/edadma/maven"
+)
 
 updateOptions := updateOptions.value.withCachedResolution(true)
-
-SbtScalariform.scalariformSettings
 
 ScalariformKeys.preferences := ScalariformKeys.preferences.value
   .setPreference(AlignParameters, true)
   .setPreference(AlignSingleLineCaseStatements, true)
-  .setPreference(DoubleIndentClassDeclaration, true)
-  //.setPreference(PreserveDanglingCloseParenthesis, true)
   .setPreference(RewriteArrowSymbols, true)
+
+//comment out for test:run
+//fork in run := true
 
 sourceGenerators in Test += Def.task {
   val file = (sourceManaged in Test).value / "amm.scala"

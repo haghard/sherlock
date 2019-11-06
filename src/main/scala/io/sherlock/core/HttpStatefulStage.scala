@@ -12,7 +12,7 @@ class UniqueHostsStage(val hosts: AtomicReference[Set[String]]) extends GraphSta
 
   override def shape = FlowShape.of(in, out)
 
-  private def findHost(headers: Seq[HttpHeader]): Option[Host] = {
+  private def findHostHeader(headers: Seq[HttpHeader]): Option[Host] = {
     def loop(it: Iterator[HttpHeader]): Option[Host] =
       if (it.hasNext) {
         it.next match {
@@ -40,7 +40,7 @@ class UniqueHostsStage(val hosts: AtomicReference[Set[String]]) extends GraphSta
 
           override def onPush(): Unit = {
             val nextReq = grab(in)
-            findHost(nextReq.headers).foreach { h ⇒
+            findHostHeader(nextReq.headers).foreach { h ⇒
               save(hosts, h.host.address)
             }
             log.info(s"hosts: ${hosts.get().mkString(",")}")

@@ -117,7 +117,7 @@ object LRUCaches {
       }
     }
 
-    def size = currentSize
+    def size: Int = currentSize
 
     override def toString: String = {
       def loopMap(it: java.util.Iterator[K], sb: mutable.StringBuilder,
@@ -223,6 +223,7 @@ object LRUCaches {
         b
       }
     }
+
   }
 
   class RequestCache0[T](capacity: Int) {
@@ -288,13 +289,13 @@ object LRUCaches {
     capacity:          Int,
     private val empty: Node[String, T] = new Node[String, T]()) {
 
+    private var currentSize: Int = 0
+
     private val cache: java.util.Map[String, Node[String, T]] =
       new java.util.HashMap[String, Node[String, T]]()
 
     var head: Node[String, T] = empty
     var tail: Node[String, T] = empty
-
-    var currentSize: Int = 0
 
     def put(uuid: String, req: T): Boolean = {
       if (cache.containsKey(uuid)) false

@@ -1,26 +1,25 @@
 package io.sherlock
 
+import java.io.{ FileInputStream, InputStream }
+import java.security.{ KeyStore, SecureRandom }
 import java.util.concurrent.atomic.AtomicReference
 
 import akka.actor.{ ActorRef, ActorSystem }
-import akka.http.scaladsl.model.{ HttpMethods, HttpRequest }
 import akka.http.scaladsl.server.{ RequestContext, Route }
-import akka.stream.scaladsl.Flow
 import brave.Tracing
 import io.sherlock.core.{ ActorCache, UniqueHostsStage }
-//import io.sherlock.http.SwaggerApi
-import io.sherlock.stages.{ BloomFilterStage, CacheStage }
 import zipkin.reporter.AsyncReporter
 import zipkin.reporter.okhttp3.OkHttpSender
 
 import scala.concurrent.Await
-//import akka.cluster.http.management.ClusterHttpManagement
-import akka.http.scaladsl.Http
+import akka.http.scaladsl.{ ConnectionContext, Http }
 import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory
 import io.sherlock.core.ServiceRegistry
 import io.sherlock.http.HttpApi
+import javax.net.ssl.{ KeyManagerFactory, SSLContext, TrustManagerFactory }
 import net.ceedubs.ficus.Ficus._
+
 import scala.concurrent.duration._
 
 object Main extends App with OptsSupport {
@@ -74,13 +73,38 @@ object Main extends App with OptsSupport {
     Flow[HttpRequest].mapAsync(4)(req ⇒ (src ? req).mapTo[HttpRequest])
   }*/
 
+  /*new SwaggerApi().route*/
+
+  val trustfulCtx: SSLContext = {
+    val password: Array[Char] = "qwerty".toCharArray
+    val ks: KeyStore = KeyStore.getInstance("PKCS12")
+    //KeyStore.getInstance("JKS")
+    val keystore: InputStream = new FileInputStream("./fsa.jks")
+    //val keystore: InputStream = new FileInputStream("./fsa.jks")
+    //getClass.getClassLoader.getResourceAsStream("server.p12")
+
+    require(keystore != null, "Keystore required !!!")
+    ks.load(keystore, password)
+
+    val keyManagerFactory = KeyManagerFactory.getInstance("SunX509")
+    keyManagerFactory.init(ks, password)
+
+    val tmf: TrustManagerFactory = TrustManagerFactory.getInstance("SunX509")
+    tmf.init(ks)
+
+    val sslContext: SSLContext = SSLContext.getInstance("TLS")
+    sslContext.init(keyManagerFactory.getKeyManagers, tmf.getTrustManagers, new SecureRandom)
+    sslContext
+  }
+
   Http()
-    .bindAndHandle( /*new SwaggerApi().route*/ routeFlow, hostname, httpPort)
+    .bindAndHandle(handler = routeFlow, interface = hostname, port = httpPort
+    /*, connectionContext = ConnectionContext.https(trustfulCtx)*/ )
     .onComplete {
       case scala.util.Success(_) ⇒
         println(s"seed-nodes: ${seedNodes.mkString(",")}")
         println(s"akka node: ${hostname}:${akkaPort}")
-        println(s"http port: ${httpPort}")
+        println(s"https port: ${httpPort}")
         println(Console.GREEN +
           """
               ___  ____   ___  __   __  ___   ___     ______
@@ -91,7 +115,7 @@ object Main extends App with OptsSupport {
         """ + "\n" + s""":: ($version) ::""" + Console.RESET)
 
       case scala.util.Failure(_) ⇒
-        Await.result(system.terminate(), 10.seconds)
+        Await.result(system.terminate, 10.seconds)
         System.exit(-1)
     }
 

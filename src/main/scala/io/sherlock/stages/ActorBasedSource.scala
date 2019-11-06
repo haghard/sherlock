@@ -2,8 +2,8 @@ package io.sherlock.stages
 
 import akka.actor.ActorRef
 import akka.stream.stage.GraphStageLogic.StageActor
-import akka.stream.stage.{ GraphStage, GraphStageLogic, OutHandler, StageLogging }
 import akka.stream.{ Attributes, Outlet, SourceShape }
+import akka.stream.stage.{ GraphStage, GraphStageLogic, OutHandler, StageLogging }
 import io.sherlock.stages.ActorBasedSource.{ AssignStageActor, SessionOverflowStrategy }
 
 import scala.collection._
@@ -23,7 +23,6 @@ object ActorBasedSource {
   case object FailStage extends SessionOverflowStrategy
 
   final case class Overflow(msg: String) extends RuntimeException(msg)
-
 }
 
 final class ActorBasedSource[T: ClassTag](source: ActorRef, bufferSize: Int, os: SessionOverflowStrategy) extends GraphStage[SourceShape[T]] {

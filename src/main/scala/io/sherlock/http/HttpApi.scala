@@ -12,8 +12,8 @@ import akka.http.scaladsl.model.{ HttpResponse, StatusCodes }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import akka.stream.scaladsl.{ BroadcastHub, Keep, RunnableGraph, Sink, Source }
-import akka.stream.{ ActorMaterializer, ActorMaterializerSettings, KillSwitches, OverflowStrategy }
+import akka.stream.scaladsl.{ BroadcastHub, Keep, RunnableGraph, Source }
+import akka.stream.{ ActorMaterializer, ActorMaterializerSettings, OverflowStrategy }
 import akka.util.Timeout
 import brave.Tracing
 import io.sherlock.core.{ HeartBeat, HeartBeatTrace, Service, ServiceRegistry }
@@ -28,6 +28,10 @@ class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(implici
   implicit val timeout: Timeout = 3.seconds
 
   val route: Route =
+    /*path("greeting" / Segment) { name ⇒
+    complete("Hello " + name)
+  }*/
+
     pathPrefix("service") {
       path(Segments) { root ⇒
         get {
@@ -88,14 +92,14 @@ class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(implici
       .scan(0)((a, _) ⇒ a + 1)
       .map(timeToServerSentEvent(LocalTime.now, _))
       .keepAlive(4.seconds / 2, () ⇒ ServerSentEvent.heartbeat)
-      .toMat(BroadcastHub.sink(1 << 4))(Keep.right).run
-    source.runWith(Sink.ignore)
+      .toMat(BroadcastHub.sink(bufferSize = 256))(Keep.right).run
     source
+    //source.runWith(Sink.ignore)
+    //source.toMat(BroadcastHub.sink(bufferSize = 256))(Keep.right).run()
   }
 
-  private val killSwitch = KillSwitches.shared("ingestion-hub")
-
   /*def initIngestionHub[M](sink: Sink[DroneData, M]): M = {
+    val killSwitch = KillSwitches.shared("ingestion-hub")
     MergeHub.source[DroneData](perProducerBufferSize = 32)
       .via(killSwitch.flow)
       .toMat(sink)(Keep.both)

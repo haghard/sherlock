@@ -2,6 +2,9 @@ package io.sherlock
 
 object Trees {
 
+  //https://javarevisited.blogspot.com/2015/10/how-to-implement-binary-search-tree-in-java-example.html
+  //https://javarevisited.blogspot.com/2016/07/binary-tree-preorder-traversal-in-java-using-recursion-iteration-example.html?utm_source=feedburner&utm_medium=email&utm_campaign=Feed:+Javarevisited+(javarevisited)
+
   case class Tree[T](value: T, children: List[Tree[T]] = Nil)
 
   def lazyTraverseDF[T](t: Tree[T]): Stream[T] =
@@ -14,13 +17,29 @@ object Trees {
       acc #::: traverseWithDepth(el, depth + 1)
     }
 
-  //Depth first - Pre order
+  def traverseDF3[A, U](tree: Tree[A])(f: A ⇒ U): Unit = {
+    var stack = List[Tree[A]]()
+    stack = tree :: stack
+
+    while (stack.nonEmpty) {
+      val cur = stack.head
+      f(cur.value)
+
+      stack = stack.tail
+
+      if(cur.children.nonEmpty) {
+        stack = cur.children ::: stack
+      }
+    }
+  }
+
+  //Depth first - pre-order traversal algorithm
   def traverseDF[A, U](tree: Tree[A])(f: A ⇒ U): Unit = {
     @annotation.tailrec
-    def loop(current: Tree[A], next: List[Tree[A]]): Unit = {
-      f(current.value)
+    def loop(cur: Tree[A], next: List[Tree[A]]): Unit = {
+      f(cur.value)
       //println(" - " + predecessors.mkString(","))
-      current.children match {
+      cur.children match {
         case head :: tail ⇒
           loop(head, tail ::: next)
         case Nil ⇒
@@ -53,11 +72,13 @@ object Trees {
   val t =
     Tree(
       "root",
-      (Tree("a", Tree("a5") :: Tree("a10", Tree("a11") :: Tree("a12") :: Nil) :: Nil) ::
+      (Tree("a", Tree("a01") :: Tree("a01", Tree("a11") :: Tree("a12") :: Nil) :: Nil) ::
         Tree("b", Tree("b1") :: Tree("b2") :: Nil) ::
         Tree("c", Tree("c1") :: Tree("c2") :: Tree("c3") :: Nil) :: Nil))
 
   traverseDF(t)(println(_))
+  traverseDF2(t)(println(_))
+  traverseDF3(t)(println(_))
 
   lazyTraverseDF(t) take 25 foreach println
 
@@ -193,5 +214,48 @@ object Trees {
 
   println("Searching: " + suffixTree.search("cac", 2))
   println("Searching: " + suffixTree.search("caco"))
+
+  //A Buffer implementation backed by a list. It provides constant time prepend and append.
+  // Most other operations are linear.
+  val lb = scala.collection.mutable.ListBuffer[Int]()
+  lb += 1 //append
+  lb.+=:(90) //prepend
+  lb(2) //random access  linear
+
+  //An implementation of the Buffer class using an array to represent the assembled sequence internally.
+  // Append, update and random access take constant time (amortized time). Prepends and removes are linear in the buffer size.
+  val ab = new scala.collection.mutable.ArrayBuffer[Int](10)
+  ab.+=(1) //append
+
+  ab.+=:(2) //prepend - linear
+
+
+  val ml0 = scala.collection.mutable.MutableList[Int]()
+  //prepend O(1)
+  ml0.+=:(1)
+  ml0.+=:(2)
+
+
+  val ml1 = scala.collection.mutable.MutableList[Int]()
+  //append O(1)
+  ml1.+=(1)
+  ml1.+=(2)
+
+  //collection.mutable.Buffer[Int]()
+  val mb0 = collection.mutable.ArrayBuffer[Int]()
+  //prepend O(n)
+  mb0.+=:(1)
+  mb0.+=:(2)
+  mb0
+
+  val mb1 = collection.mutable.ArrayBuffer[Int]()
+  //append O(1)
+  mb1.+=(1)
+  mb1.+=(2)
+  mb1
+
+
+  
+
   //suffixTree.search()
 }

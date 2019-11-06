@@ -46,3 +46,5 @@ sbt
 
 curl -X POST -d '{"ip":"192.168.0.2","path":"/users/v1.0","port":9000}' --header "Content-Type:application/json" http://192.168.77.98:9091/service --include
 http GET http://192.168.77.98:9091/service/users/v1.0
+
+

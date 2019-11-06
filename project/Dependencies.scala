@@ -46,7 +46,9 @@ object Dependencies {
     val fingertree = "de.sciss" %% "fingertree" % "1.5.4"
 
     //https://medium.com/@AlirezaMeskin/implementing-immutable-trie-in-scala-c0ab58fd401
-    val radixtree = "com.rklaehn" %% "radixtree" % "0.5.0"
+    val radixtree = "com.rklaehn" %% "radixtree" % "0.5.1"
+
+    val isarn = "org.isarnproject" %% "isarn-collections" % "0.0.4"
 
     //2.11
     //val squbs    = "org.squbs" %% "squbs-pattern" % squbsVersion
@@ -54,12 +56,17 @@ object Dependencies {
 
     //val swakka = "net.jtownson" %% "swakka" % "0.1a-SNAPSHOT"
 
+    //BinaryHeap which is an implementation of a Priority Queue
+    //https://efekahraman.github.io/2019/03/an-example-of-free-monads-and-optimization
+    val catsColl = "org.typelevel" %% "cats-collections-core" % "0.7.0"
+
+    val btree = "xyz.hyperreal" %% "b-tree" % "0.5"
+
     // li haoyi ammonite repl embed
-    //  val ammonite = "com.lihaoyi" % "ammonite" % "1.1.2" % "test" cross CrossVersion.full
+    val ammonite = ("com.lihaoyi" % "ammonite" % "1.6.9" % "test").cross(CrossVersion.full)
 
     val all = Seq(akkaActor, akkaHttp, akkaHttp, akkaSprayJson, akkaDistData, slf4j, logback, snaptree,
-      fingertree, radixtree,
-      /*ammonite,*/ /*swakka,*/
+      fingertree, radixtree, isarn, ammonite, catsColl, btree, /*swakka,*/
       ficus, akkaStreams, algebird, jvmUtil) ++ Seq(opentracing, zipkinSender, brave /*, akkaClusterManagement*/ )
   }
 

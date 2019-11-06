@@ -8,6 +8,8 @@ import akka.stream.stage._
 import io.sherlock.core.ActorCache.{ Ans, Check }
 import akka.pattern.ask
 
+import scala.collection.immutable.LinearSeq
+import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 //  http GET :9091/user/1/stat

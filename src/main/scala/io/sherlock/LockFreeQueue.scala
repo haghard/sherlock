@@ -9,6 +9,7 @@ object LockFreeQueue {
   case class NodeRef[T](value: T, next: AtomicReference[NodeRef[T]] = new AtomicReference[NodeRef[T]](null))
 }
 
+//LockFreeQueue from scalaz actor https://gist.github.com/djspiewak/671deab9d7ea027cdc42
 class LockFreeQueue[T] {
   private val zero = NodeRef[T](null.asInstanceOf[T])
 
@@ -20,9 +21,12 @@ class LockFreeQueue[T] {
     val last = tail.get
     val next = last.next.get
     if (last == tail.get) {
-      val r = (if (next == null) {
-        if (last.next.compareAndSet(next, node)) tail.compareAndSet(last, node) else false
-      } else tail.compareAndSet(last, next))
+      val r =
+        if (next == null) {
+          if (last.next.compareAndSet(next, node))
+            tail.compareAndSet(last, node)
+          else false
+        } else tail.compareAndSet(last, next)
       if (r) () else lookFreeEnqLoop(node)
     } else lookFreeEnqLoop(node)
   }
