@@ -62,12 +62,16 @@ object Dependencies {
 
     val btree = "xyz.hyperreal" %% "b-tree" % "0.5"
 
+    val playJson = "com.typesafe.play" %% "play-json" % "2.7.3"
+
+    val jsoniter = "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.0.1"
+
     // li haoyi ammonite repl embed
-    val ammonite = ("com.lihaoyi" % "ammonite" % "1.6.9" % "test").cross(CrossVersion.full)
+    val ammonite = ("com.lihaoyi" % "ammonite" % "1.7.4" % "test").cross(CrossVersion.full)
 
     val all = Seq(akkaActor, akkaHttp, akkaHttp, akkaSprayJson, akkaDistData, slf4j, logback, snaptree,
       fingertree, radixtree, isarn, ammonite, catsColl, btree, /*swakka,*/
-      ficus, akkaStreams, algebird, jvmUtil) ++ Seq(opentracing, zipkinSender, brave /*, akkaClusterManagement*/ )
+      ficus, akkaStreams, algebird, jvmUtil) ++ Seq(opentracing, zipkinSender, brave /*, akkaClusterManagement*/ , playJson, jsoniter)
   }
 
   object Test {
