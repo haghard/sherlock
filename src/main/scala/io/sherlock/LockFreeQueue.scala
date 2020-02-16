@@ -1,8 +1,7 @@
 package io.sherlock
 
-import java.util.concurrent.atomic.AtomicReference
-
 import io.sherlock.LockFreeQueue.NodeRef
+import java.util.concurrent.atomic.AtomicReference
 
 object LockFreeQueue {
 

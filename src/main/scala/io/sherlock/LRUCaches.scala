@@ -137,7 +137,7 @@ object LRUCaches {
       }
 
       loopList(leastRU, new mutable.StringBuilder().append("list:")) +
-        loopMap(cache.keySet.iterator, new mutable.StringBuilder().append("cache:"), true)
+        loopMap(cache.keySet.iterator, new mutable.StringBuilder().append("map:"), true)
     }
   }
 

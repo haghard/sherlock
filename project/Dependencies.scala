@@ -1,8 +1,8 @@
 import sbt._
 
 object Dependencies {
-  val akkaVersion = "2.5.21"
-  val squbsVersion = "0.9.1"
+  val akkaVersion = "2.5.26"
+  val squbsVersion = "0.13.0"
 
   object Compile {
     val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
@@ -50,13 +50,10 @@ object Dependencies {
 
     val isarn = "org.isarnproject" %% "isarn-collections" % "0.0.4"
 
-    //2.11
-    //val squbs    = "org.squbs" %% "squbs-pattern" % squbsVersion
-    //val chronicle = "net.openhft" % "chronicle-queue" % "4.5.13"
-
     //val swakka = "net.jtownson" %% "swakka" % "0.1a-SNAPSHOT"
 
     //BinaryHeap which is an implementation of a Priority Queue
+    //https://github.com/typelevel/cats-collections/blob/master/bench/src/main/scala/HeapBench.scala
     //https://efekahraman.github.io/2019/03/an-example-of-free-monads-and-optimization
     val catsColl = "org.typelevel" %% "cats-collections-core" % "0.7.0"
 
@@ -67,11 +64,17 @@ object Dependencies {
     val jsoniter = "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.0.1"
 
     // li haoyi ammonite repl embed
-    val ammonite = ("com.lihaoyi" % "ammonite" % "1.7.4" % "test").cross(CrossVersion.full)
+    val ammonite = ("com.lihaoyi" % "ammonite" % "1.9.2" % "test").cross(CrossVersion.full)
+
+    //https://squbs.readthedocs.io/en/latest/circuitbreaker/
+    val squbsP = ("org.squbs" %% "squbs-pattern" % squbsVersion).excludeAll("com.typesafe.akka")
+    val chronicle = "net.openhft" % "chronicle-queue" % "4.5.13"
 
     val all = Seq(akkaActor, akkaHttp, akkaHttp, akkaSprayJson, akkaDistData, slf4j, logback, snaptree,
       fingertree, radixtree, isarn, ammonite, catsColl, btree, /*swakka,*/
-      ficus, akkaStreams, algebird, jvmUtil) ++ Seq(opentracing, zipkinSender, brave /*, akkaClusterManagement*/ , playJson, jsoniter)
+      ficus, akkaStreams, algebird, jvmUtil) ++ Seq(opentracing, zipkinSender, brave /*, akkaClusterManagement*/ , playJson, jsoniter,
+      squbsP)
+
   }
 
   object Test {
