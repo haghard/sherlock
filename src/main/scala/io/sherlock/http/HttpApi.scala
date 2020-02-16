@@ -17,7 +17,7 @@ import akka.stream.{ ActorMaterializer, ActorMaterializerSettings, OverflowStrat
 import akka.util.Timeout
 import brave.Tracing
 import io.sherlock.core.{ HeartBeat, HeartBeatTrace, Service, ServiceRegistry }
-import io.sherlock.stages.ActorBasedSource
+import io.sherlock.stages.{ ActorBasedSource, SqubsExamples }
 import io.sherlock.stages.ActorBasedSource.{ AssignStageActor, FailStage }
 
 import scala.concurrent.duration._
@@ -28,10 +28,6 @@ class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(implici
   implicit val timeout: Timeout = 3.seconds
 
   val route: Route =
-    /*path("greeting" / Segment) { name ⇒
-    complete("Hello " + name)
-  }*/
-
     pathPrefix("service") {
       path(Segments) { root ⇒
         get {
@@ -52,7 +48,11 @@ class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(implici
           }
         }
       }
-    }
+    } ~
+      (path("ping" / Segment) & optionalHeaderValueByName(SqubsExamples.ocHeader)) { (name, limited) ⇒
+        if (limited.isDefined) complete(StatusCodes.ServiceUnavailable → "Over capacity")
+        else complete("Pong " + name)
+      }
 
   sealed trait Protocol {
     def id: Int

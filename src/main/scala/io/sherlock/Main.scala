@@ -1,23 +1,23 @@
 package io.sherlock
 
-import java.io.{ FileInputStream, InputStream }
-import java.security.{ KeyStore, SecureRandom }
 import java.util.concurrent.atomic.AtomicReference
 
 import akka.actor.{ ActorRef, ActorSystem }
-import akka.http.scaladsl.server.{ RequestContext, Route }
+import akka.http.scaladsl.model.HttpRequest
+import akka.http.scaladsl.server.Route
 import brave.Tracing
 import io.sherlock.core.{ ActorCache, UniqueHostsStage }
 import zipkin.reporter.AsyncReporter
 import zipkin.reporter.okhttp3.OkHttpSender
 
 import scala.concurrent.Await
-import akka.http.scaladsl.{ ConnectionContext, Http }
+import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{ BidiFlow, Flow }
 import com.typesafe.config.ConfigFactory
 import io.sherlock.core.ServiceRegistry
 import io.sherlock.http.HttpApi
-import javax.net.ssl.{ KeyManagerFactory, SSLContext, TrustManagerFactory }
+import io.sherlock.stages.{ CacheStage, HttpBidiFlow, SqubsExamples }
 import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration._
@@ -56,15 +56,25 @@ object Main extends App with OptsSupport {
   val hosts = new AtomicReference(Set[String]())
   val uniqueHosts = new UniqueHostsStage(hosts)
 
-  /*
-  implicit val t = akka.util.Timeout(1.seconds)
+  //curl http://127.0.0.1:9090/ping/haghard
+
+  val httpGraph = BidiFlow.fromGraph(new HttpBidiFlow[HttpRequest, HttpRequest])
+    .join(Flow.fromFunction[(HttpRequest, String), (HttpRequest, String)](identity))
+    //.join(Flow[(HttpRequest, String)].buffer(1 << 2, OverflowStrategy.backpressure)).map(_._1)
+    .via(routeFlow)
+
+  SqubsExamples.reqRespFlow(system, 2)
+    .join(Flow.fromFunction[(String, HttpRequest), (String, HttpRequest)](identity))
+    //.join(Flow[(String, HttpRequest)].buffer(1 << 2, OverflowStrategy.backpressure))
+    .via(routeFlow)
+
+  /*implicit val t = akka.util.Timeout(1.seconds)
   val cache = system.actorOf(ActorCache.props)
-  val stage = new CacheStage(cache)(t)
-  */
+  val stage = new CacheStage(cache)(t)*/
 
   //val httpGraph = (Flow.fromGraph(check(cache)) via routeFlow)
   //val httpGraph = (Flow.fromGraph(uniqueHosts) via routeFlow)
-  //val httpGraph = (Flow.fromGraph(stage) via routeFlow)
+  //val httpGraph = Flow.fromGraph(stage) via routeFlow
 
   //val httpGraph = (Flow.fromGraph(new BloomFilterStage()) via routeFlow)
 
@@ -75,7 +85,7 @@ object Main extends App with OptsSupport {
 
   /*new SwaggerApi().route*/
 
-  val trustfulCtx: SSLContext = {
+  /*val trustfulCtx: SSLContext = {
     val password: Array[Char] = "qwerty".toCharArray
     val ks: KeyStore = KeyStore.getInstance("PKCS12")
     //KeyStore.getInstance("JKS")
@@ -95,10 +105,10 @@ object Main extends App with OptsSupport {
     val sslContext: SSLContext = SSLContext.getInstance("TLS")
     sslContext.init(keyManagerFactory.getKeyManagers, tmf.getTrustManagers, new SecureRandom)
     sslContext
-  }
+  }*/
 
   Http()
-    .bindAndHandle(handler = routeFlow, interface = hostname, port = httpPort
+    .bindAndHandle(handler = httpGraph /*routeFlow*/ , interface = hostname, port = httpPort
     /*, connectionContext = ConnectionContext.https(trustfulCtx)*/ )
     .onComplete {
       case scala.util.Success(_) ⇒
