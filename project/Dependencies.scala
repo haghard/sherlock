@@ -68,12 +68,13 @@ object Dependencies {
 
     //https://squbs.readthedocs.io/en/latest/circuitbreaker/
     val squbsP = ("org.squbs" %% "squbs-pattern" % squbsVersion).excludeAll("com.typesafe.akka")
+    val squbsExt = ("org.squbs" %% "squbs-ext" % squbsVersion).excludeAll("com.typesafe.akka")
     val chronicle = "net.openhft" % "chronicle-queue" % "4.5.13"
 
     val all = Seq(akkaActor, akkaHttp, akkaHttp, akkaSprayJson, akkaDistData, slf4j, logback, snaptree,
       fingertree, radixtree, isarn, ammonite, catsColl, btree, /*swakka,*/
       ficus, akkaStreams, algebird, jvmUtil) ++ Seq(opentracing, zipkinSender, brave /*, akkaClusterManagement*/ , playJson, jsoniter,
-      squbsP)
+      squbsP, squbsExt)
 
   }
 
