@@ -63,7 +63,7 @@ object Main extends App with OptsSupport {
     //.join(Flow[(HttpRequest, String)].buffer(1 << 2, OverflowStrategy.backpressure)).map(_._1)
     .via(routeFlow)
 
-  SqubsExamples.reqRespFlow(system, 2)
+  SqubsExamples.bidiHttpFlow(system, 2)
     .join(Flow.fromFunction[(String, HttpRequest), (String, HttpRequest)](identity))
     //.join(Flow[(String, HttpRequest)].buffer(1 << 2, OverflowStrategy.backpressure))
     .via(routeFlow)

@@ -159,7 +159,7 @@ object SqubsExamples {
 
   val ocHeader = "Unavailable"
 
-  def reqRespFlow(sys: ActorSystem, limit: Int = 1 << 5, parallelism: Int = 4): BidiFlow[HttpRequest, (String, HttpRequest), (String, HttpRequest), HttpRequest, akka.NotUsed] = {
+  def bidiHttpFlow(sys: ActorSystem, limit: Int = 1 << 5, parallelism: Int = 4): BidiFlow[HttpRequest, (String, HttpRequest), (String, HttpRequest), HttpRequest, akka.NotUsed] = {
 
     def captureReq(ref: AtomicReference[Map[String, HttpRequest]])(updater: Map[String, HttpRequest] ⇒ Map[String, HttpRequest]): Unit = {
       val map = ref.get
@@ -208,9 +208,10 @@ object SqubsExamples {
 
 }
 
+//https://github.com/calvinlfer/Akka-Streams-custom-stream-processing-examples
 final class HttpBidiFlow[In, Out] extends GraphStage[BidiShape[In, (In, String), (Out, String), Out]] {
   //for limiting
-  private val asyncCallInFlight = new AtomicLong(0l)
+  private val asyncCallInFlight = new AtomicLong(0L)
 
   //in  ~> to
   val in = Inlet[In]("in")
@@ -303,16 +304,20 @@ final class HttpBidiFlow[In, Out] extends GraphStage[BidiShape[In, (In, String),
 
       setHandler(out, new OutHandler {
         override def onPull(): Unit = {
+          // we query here because we artificially calls onPull
+          // and we must not violate the GraphStages guarantees
           if (!upstreamFinished || outBuffer.nonEmpty) {
-            //log.info("onPull Buffer: {}", outBuffer.size)
-            outBuffer.dequeueFirst((_: (Out, String)) ⇒ true) match {
-              case Some((elem, reqId)) ⇒
-                //log.info("push buffered: {} size: {}", reqId, outBuffer.size)
-                //log.info("buffer ~> out: {}", reqId)
-                push(out, elem)
-              case None ⇒
-                if (!hasBeenPulled(from)) pull(from)
-                else if (!hasBeenPulled(in) && isAvailable(to)) pull(in)
+            if(isAvailable(out)) {
+              //log.info("onPull Buffer: {}", outBuffer.size)
+              outBuffer.dequeueFirst((_: (Out, String)) ⇒ true) match {
+                case Some((elem, reqId)) ⇒
+                  //log.info("push buffered: {} size: {}", reqId, outBuffer.size)
+                  //log.info("buffer ~> out: {}", reqId)
+                  push(out, elem)
+                case None ⇒
+                  if (!hasBeenPulled(from)) pull(from)
+                  else if (!hasBeenPulled(in) && isAvailable(to)) pull(in)
+              }
             }
           } else complete(out)
         }
