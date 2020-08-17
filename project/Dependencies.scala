@@ -1,7 +1,7 @@
 import sbt._
 
 object Dependencies {
-  val akkaVersion = "2.5.31"
+  val akkaVersion = "2.6.8"
   val squbsVersion = "0.13.0"
 
   object Compile {
@@ -60,8 +60,7 @@ object Dependencies {
 
     val btree = "xyz.hyperreal" %% "b-tree" % "0.5"
 
-    val playJson = "com.typesafe.play" %% "play-json" % "2.7.3"
-
+    val playJson = "com.typesafe.play" %% "play-json" % "2.7.4"
     val jsoniter = "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.0.1"
 
     // li haoyi ammonite repl embed

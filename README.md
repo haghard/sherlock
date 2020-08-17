@@ -55,3 +55,7 @@ http GET http://192.168.77.98:9091/service/users/v1.0
 https://aleksandarskrbic.github.io/power-of-akka-streams/
 
 Stefano Bonetti - Monitoring Akka Streams:  https://www.youtube.com/watch?v=4s1YzgrRR2A
+
+https://doc.akka.io/docs/akka/current/stream/stream-graphs.html#bidirectional-flows
+
+https://github.com/calvinlfer/Akka-Streams-custom-stream-processing-examples
