@@ -50,11 +50,26 @@ object SqubsExamples {
         SourceShape(sendOut.outlet)
       })
 
+
+  def scenario24(implicit sys: ActorSystem) = {
+
+    def riskyOperation(in: String): Try[String] = {
+      ???
+    }
+
+    //https://squbs.readthedocs.io/en/latest/flow-retry/
+    val retry = Retry[String, String, UUID](max = 10)
+    val riskyFlow = Flow[(String, UUID)].map { case (s, ctx) => (riskyOperation(s), ctx) }
+
+    Source("a" :: "b" :: "c" :: Nil)
+      .map(s ⇒ (s, UUID.randomUUID))
+      .via(retry.join(riskyFlow))
+      .runWith(Sink.foreach(println))(???)
+  }
+
   //https://squbs.readthedocs.io/en/latest/circuitbreaker/
   def scenario23(implicit sys: ActorSystem) = {
     import org.squbs.streams.circuitbreaker.CircuitBreakerSettings
-
-    val retry = Retry[String, String, Long](max = 10)
 
     val config = ConfigFactory.parseString(
       """

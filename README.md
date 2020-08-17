@@ -59,3 +59,6 @@ Stefano Bonetti - Monitoring Akka Streams:  https://www.youtube.com/watch?v=4s1Y
 https://doc.akka.io/docs/akka/current/stream/stream-graphs.html#bidirectional-flows
 
 https://github.com/calvinlfer/Akka-Streams-custom-stream-processing-examples
+
+
+https://www.infoq.com/presentations/squbs/
