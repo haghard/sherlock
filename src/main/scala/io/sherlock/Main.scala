@@ -1,19 +1,21 @@
 package io.sherlock
 
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
 
 import akka.actor.{ ActorRef, ActorSystem }
-import akka.http.scaladsl.model.HttpRequest
+import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
 import akka.http.scaladsl.server.Route
 import brave.Tracing
 import io.sherlock.core.{ ActorCache, UniqueHostsStage }
 import zipkin.reporter.AsyncReporter
 import zipkin.reporter.okhttp3.OkHttpSender
 
-import scala.concurrent.Await
+import scala.concurrent.{ Await, Future }
 import akka.http.scaladsl.Http
-import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{ BidiFlow, Flow }
+import akka.stream.contrib.PassThroughFlow
+import akka.stream.{ ActorMaterializer, KillSwitches, OverflowStrategy }
+import akka.stream.scaladsl.{ BidiFlow, Flow, Keep, Sink, Source }
 import com.typesafe.config.ConfigFactory
 import io.sherlock.core.ServiceRegistry
 import io.sherlock.http.HttpApi
@@ -58,15 +60,46 @@ object Main extends App with OptsSupport {
 
   //curl http://127.0.0.1:9090/ping/haghard
 
-  val httpGraph = BidiFlow.fromGraph(new HttpBidiFlow[HttpRequest, HttpRequest])
+  //val httpGraph =
+  BidiFlow.fromGraph(new HttpBidiFlow[HttpRequest, HttpRequest])
     .join(Flow.fromFunction[(HttpRequest, String), (HttpRequest, String)](identity))
     //.join(Flow[(HttpRequest, String)].buffer(1 << 2, OverflowStrategy.backpressure)).map(_._1)
     .via(routeFlow)
 
-  SqubsExamples.bidiHttpFlow(system, 2)
+  //val httpGraph =
+  SqubsExamples.bidiHttpFlow(system, maxInFlight = 1)
     .join(Flow.fromFunction[(String, HttpRequest), (String, HttpRequest)](identity))
     //.join(Flow[(String, HttpRequest)].buffer(1 << 2, OverflowStrategy.backpressure))
     .via(routeFlow)
+
+  val preRequest: Flow[HttpRequest, HttpRequest, akka.NotUsed] =
+    Flow[HttpRequest].mapAsync(1) { r ⇒
+      Future {
+        system.log.info("preRequest")
+        r
+      }(materializer.executionContext)
+    }
+
+  val postRequest: Flow[(HttpRequest, HttpResponse), HttpResponse, akka.NotUsed] =
+    Flow[(HttpRequest, HttpResponse)].map {
+      case (req, resp) ⇒
+        system.log.info("postRequest")
+        resp
+    }
+
+  val httpGraph: Flow[HttpRequest, HttpResponse, akka.NotUsed] =
+    preRequest.via(akka.stream.contrib.PassThroughFlow(routeFlow)).via(postRequest)
+
+  //akka.stream.contrib.PassThroughFlow(routeFlow)
+
+  /*Source
+    .queue[HttpRequest](10, OverflowStrategy.backpressure)
+    .via(httpGraph)
+    .viaMat(KillSwitches.single)(Keep.both)
+    .toMat(Sink.foreach { case response ⇒ ??? }) {
+      case ((sink, switch), done) => (sink, switch, done)
+    }*/
+  //.to(Sink.foreach { resp => ??? })
 
   /*implicit val t = akka.util.Timeout(1.seconds)
   val cache = system.actorOf(ActorCache.props)

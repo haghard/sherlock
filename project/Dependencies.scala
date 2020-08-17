@@ -1,7 +1,7 @@
 import sbt._
 
 object Dependencies {
-  val akkaVersion = "2.5.26"
+  val akkaVersion = "2.5.31"
   val squbsVersion = "0.13.0"
 
   object Compile {
@@ -14,6 +14,7 @@ object Dependencies {
     val akkaSprayJson = "com.typesafe.akka" %% "akka-http-spray-json" % "10.0.9"
     val ficus = "com.iheart" %% "ficus" % "1.4.0"
     val akkaStreams = "com.typesafe.akka" %% "akka-stream" % akkaVersion
+    val akkaStreamContrib = ("com.typesafe.akka" %% "akka-stream-contrib" % "0.11").excludeAll("com.typesafe.akka") //2.6.0
 
     val opentracing = "io.opentracing" % "opentracing-api" % "0.21.0"
     val zipkinSender = "io.zipkin.reporter" % "zipkin-sender-okhttp3" % "0.7.0"
@@ -74,7 +75,7 @@ object Dependencies {
     val all = Seq(akkaActor, akkaHttp, akkaHttp, akkaSprayJson, akkaDistData, slf4j, logback, snaptree,
       fingertree, radixtree, isarn, ammonite, catsColl, btree, /*swakka,*/
       ficus, akkaStreams, algebird, jvmUtil) ++ Seq(opentracing, zipkinSender, brave /*, akkaClusterManagement*/ , playJson, jsoniter,
-      squbsP, squbsExt)
+      squbsP, squbsExt, akkaStreamContrib)
 
   }
 

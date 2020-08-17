@@ -10,7 +10,7 @@ class UniqueHostsStage(val hosts: AtomicReference[Set[String]]) extends GraphSta
   val in = Inlet[HttpRequest]("in")
   val out = Outlet[HttpRequest]("out")
 
-  override def shape = FlowShape.of(in, out)
+  override val shape = FlowShape.of(in, out)
 
   private def findHostHeader(headers: Seq[HttpHeader]): Option[Host] = {
     def loop(it: Iterator[HttpHeader]): Option[Host] =
@@ -43,7 +43,7 @@ class UniqueHostsStage(val hosts: AtomicReference[Set[String]]) extends GraphSta
             findHostHeader(nextReq.headers).foreach { h ⇒
               save(hosts, h.host.address)
             }
-            log.info(s"hosts: ${hosts.get().mkString(",")}")
+            log.info(s"hosts: ${hosts.get.mkString(",")}")
             push(out, nextReq)
           }
 

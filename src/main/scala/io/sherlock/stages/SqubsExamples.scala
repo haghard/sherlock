@@ -11,16 +11,17 @@ import akka.actor.{ ActorRef, ActorSystem }
 import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.server.{ RequestContext, Route }
-import akka.stream.scaladsl.{ BidiFlow, Flow, GraphDSL, Keep, Sink, SinkQueueWithCancel, Source, Zip }
+import akka.stream.scaladsl.{ BidiFlow, Broadcast, Flow, GraphDSL, Keep, Sink, SinkQueueWithCancel, Source, Unzip, Zip }
 import akka.stream.stage.{ AsyncCallback, GraphStage, GraphStageLogic, InHandler, OutHandler, StageLogging }
 import akka.stream.{ Attributes, BidiShape, ClosedShape, FlowShape, Graph, Inlet, Outlet, OverflowStrategy, SourceShape }
 import akka.util.ByteString
 import com.typesafe.config.ConfigFactory
+import org.squbs.streams.Retry
 import org.squbs.streams.circuitbreaker.CircuitBreaker
 import org.squbs.streams.circuitbreaker.impl.AtomicCircuitBreakerState
 
 import scala.collection.mutable
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success, Try }
 
@@ -53,6 +54,8 @@ object SqubsExamples {
   def scenario23(implicit sys: ActorSystem) = {
     import org.squbs.streams.circuitbreaker.CircuitBreakerSettings
 
+    val retry = Retry[String, String, Long](max = 10)
+
     val config = ConfigFactory.parseString(
       """
         |max-failures = 2
@@ -75,7 +78,7 @@ object SqubsExamples {
 
     Source("a" :: "b" :: "c" :: Nil)
       .map(s ⇒ (s, UUID.randomUUID))
-      .via(cb.join(flow))
+      .via(cb.join(Flow[(String, UUID)].buffer(1, ???).via(flow)))
       .runWith(Sink.seq)(???)
 
   }
@@ -157,9 +160,36 @@ object SqubsExamples {
       .via(routeFlow)
   }*/
 
+  def httpFlow(sys: ActorSystem, parallelism: Int = 4) = {
+    Flow.fromGraph(GraphDSL.create() { implicit b ⇒
+      import GraphDSL.Implicits._
+
+      val enrichReq = b.add(Flow[HttpRequest].map(req ⇒ (req, (req, UUID.randomUUID.toString))))
+      val unzip = b.add(Unzip[HttpRequest, (HttpRequest, String)]())
+      val bcastRes = b.add(Broadcast[HttpResponse](2))
+      val zip = b.add(Zip[(HttpRequest, String), HttpResponse])
+      val ask = b.add(Flow[HttpRequest].mapAsync(2) { req: HttpRequest ⇒
+        Future { null.asInstanceOf[HttpResponse] }(???)
+      })
+
+      //val q = b.add(Source.queue[(HttpRequest, String)](32, OverflowStrategy.dropNew))
+
+      // format: off
+      enrichReq ~> unzip.in
+      unzip.out0 ~> ask ~> bcastRes
+      bcastRes.out(1) ~> zip.in1
+      unzip.out1 ~> zip.in0
+      zip.out ~> Sink.foreach(???)
+
+      // format: on
+      //???
+      FlowShape(enrichReq.in, bcastRes.out(0))
+    })
+  }
+
   val ocHeader = "Unavailable"
 
-  def bidiHttpFlow(sys: ActorSystem, limit: Int = 1 << 5, parallelism: Int = 4): BidiFlow[HttpRequest, (String, HttpRequest), (String, HttpRequest), HttpRequest, akka.NotUsed] = {
+  def bidiHttpFlow(sys: ActorSystem, maxInFlight: Int = 1 << 5, parallelism: Int = 4): BidiFlow[HttpRequest, (String, HttpRequest), (String, HttpRequest), HttpRequest, akka.NotUsed] = {
 
     def captureReq(ref: AtomicReference[Map[String, HttpRequest]])(updater: Map[String, HttpRequest] ⇒ Map[String, HttpRequest]): Unit = {
       val map = ref.get
@@ -170,25 +200,26 @@ object SqubsExamples {
     //https://doc.akka.io/docs/akka/current/stream/stream-graphs.html#bidirectional-flows
     BidiFlow.fromGraph(
       GraphDSL.create() { implicit b ⇒
+        // A registry of all in-flight request
         val reqInFlight = new AtomicReference(Map[String, HttpRequest]())
 
         val inbound: FlowShape[HttpRequest, (String, HttpRequest)] =
           b.add(Flow[HttpRequest].mapAsync(parallelism) { req ⇒
             val reqId = UUID.randomUUID.toString
-            if (reqInFlight.get.size < limit) {
-              Future {
-                //import akka.pattern.ask
-                //tenantsRegion.ask
-                captureReq(reqInFlight)(_ + (reqId -> req))
-                sys.log.info(s"flies in -> {}", reqId)
-                //
-                Thread.sleep(4000)
-                (reqId, req)
-              }(sys.dispatcher)
-            } else {
+            //if (reqInFlight.get.size < maxInFlight) {
+            Future {
+              //import akka.pattern.ask
+              //tenantsRegion.ask
+              captureReq(reqInFlight)(_ + (reqId -> req))
+              sys.log.info(s"flies in -> {}", reqId)
+              //
+              Thread.sleep(4000)
+              (reqId, req)
+            }(sys.dispatcher)
+            /*} else {
               sys.log.info("reject -> {}", reqId)
               Future.successful((reqId, req.withHeaders(req.headers :+ RawHeader(ocHeader, "true"))))
-            }
+            }*/
           })
 
         val outbound: FlowShape[(String, HttpRequest), HttpRequest] =
@@ -213,7 +244,7 @@ final class HttpBidiFlow[In, Out] extends GraphStage[BidiShape[In, (In, String),
   //for limiting
   private val asyncCallInFlight = new AtomicLong(0L)
 
-  //in  ~> to
+  //in ~> to
   val in = Inlet[In]("in")
   val to = Outlet[(In, String)]("to")
 
@@ -230,14 +261,18 @@ final class HttpBidiFlow[In, Out] extends GraphStage[BidiShape[In, (In, String),
     new GraphStageLogic(shape) with StageLogging {
       var upstreamFinished = false
       val outBuffer = mutable.Queue[(Out, String)]()
-      var callback: AsyncCallback[Try[(In, String)]] = getAsyncCallback[Try[(In, String)]](onResponse)
+      var callback: AsyncCallback[Try[(In, String)]] = _
+
+      override def preStart(): Unit = {
+        callback = getAsyncCallback[Try[(In, String)]](resAvailable)
+      }
 
       def onPushFrom(elem: Out, reqId: String, isOutAvailable: Boolean): Option[(Out, String)] = {
         outBuffer.enqueue((elem, reqId))
         if (isOutAvailable) Some(outBuffer.dequeue) else None
       }
 
-      def onResponse(res: Try[(In, String)]) = {
+      def resAvailable(res: Try[(In, String)]) = {
         res.fold({ err ⇒ ??? }, {
           case (elem, reqId) ⇒
             push(to, (elem, reqId))
@@ -248,6 +283,7 @@ final class HttpBidiFlow[In, Out] extends GraphStage[BidiShape[In, (In, String),
         override def onPush(): Unit = {
           implicit val ec = materializer.executionContext
           val elem = grab(in)
+          //ask
           Future {
             val reqId = UUID.randomUUID.toString
             log.info("In:{}. AsyncCallInProgress:{}", reqId, asyncCallInFlight.incrementAndGet)
@@ -307,7 +343,7 @@ final class HttpBidiFlow[In, Out] extends GraphStage[BidiShape[In, (In, String),
           // we query here because we artificially calls onPull
           // and we must not violate the GraphStages guarantees
           if (!upstreamFinished || outBuffer.nonEmpty) {
-            if(isAvailable(out)) {
+            if (isAvailable(out)) {
               //log.info("onPull Buffer: {}", outBuffer.size)
               outBuffer.dequeueFirst((_: (Out, String)) ⇒ true) match {
                 case Some((elem, reqId)) ⇒
