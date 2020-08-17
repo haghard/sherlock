@@ -1,19 +1,17 @@
 package io.sherlock.stages
 
 import java.io.File
-import java.net.InetSocketAddress
-import java.nio.ByteBuffer
-import java.nio.channels.DatagramChannel
 import java.util.UUID
-import java.util.concurrent.atomic.{ AtomicLong, AtomicReference }
+import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
 
-import akka.actor.{ ActorRef, ActorSystem }
-import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
+import akka.actor.ActorSystem
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.model.headers.RawHeader
-import akka.http.scaladsl.server.{ RequestContext, Route }
-import akka.stream.scaladsl.{ BidiFlow, Broadcast, Flow, GraphDSL, Keep, Sink, SinkQueueWithCancel, Source, Unzip, Zip }
-import akka.stream.stage.{ AsyncCallback, GraphStage, GraphStageLogic, InHandler, OutHandler, StageLogging }
-import akka.stream.{ Attributes, BidiShape, ClosedShape, FlowShape, Graph, Inlet, Outlet, OverflowStrategy, SourceShape }
+import akka.http.scaladsl.server.{RequestContext, Route}
+import akka.stream.javadsl.SourceWithContext
+import akka.stream.scaladsl.{BidiFlow, Broadcast, Flow, GraphDSL, Keep, Sink, SinkQueueWithCancel, Source, Unzip, Zip}
+import akka.stream.stage.{AsyncCallback, GraphStage, GraphStageLogic, InHandler, OutHandler, StageLogging}
+import akka.stream.{Attributes, BidiShape, ClosedShape, FlowShape, Graph, Inlet, Outlet, OverflowStrategy, SourceShape}
 import akka.util.ByteString
 import com.typesafe.config.ConfigFactory
 import org.squbs.streams.Retry
@@ -21,9 +19,9 @@ import org.squbs.streams.circuitbreaker.CircuitBreaker
 import org.squbs.streams.circuitbreaker.impl.AtomicCircuitBreakerState
 
 import scala.collection.mutable
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 object SqubsExamples {
 
@@ -58,9 +56,12 @@ object SqubsExamples {
     }
 
     //https://squbs.readthedocs.io/en/latest/flow-retry/
+    //https://www.infoq.com/presentations/squbs/
     val retry = Retry[String, String, UUID](max = 10)
     val riskyFlow = Flow[(String, UUID)].map { case (s, ctx) => (riskyOperation(s), ctx) }
 
+    //SourceWithContext ???
+    //https://blog.softwaremill.com/painlessly-passing-message-context-through-akka-streams-1615b11efc2c
     Source("a" :: "b" :: "c" :: Nil)
       .map(s ⇒ (s, UUID.randomUUID))
       .via(retry.join(riskyFlow))
@@ -122,6 +123,9 @@ object SqubsExamples {
     val file = new File("~/Projects/sherlock/disk-buffers/pqueue-22")
     val pBuffer = new org.squbs.pattern.stream.PersistentBufferAtLeastOnce[Int](file)
     val commit = pBuffer.commit[Int]
+
+    //val src0 = Source.fromIterator(() ⇒ Iterator.range(0, Int.MaxValue)).throttle(200, 1.second)
+
     val src = timedSource(1.second, 50.millis, Int.MaxValue, "akka-source_22")
 
     /*val (queue, publisher) = Source
