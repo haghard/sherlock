@@ -48,3 +48,10 @@ curl -X POST -d '{"ip":"192.168.0.2","path":"/users/v1.0","port":9000}' --header
 http GET http://192.168.77.98:9091/service/users/v1.0
 
 
+
+
+### Links 
+
+https://aleksandarskrbic.github.io/power-of-akka-streams/
+
+Stefano Bonetti - Monitoring Akka Streams:  https://www.youtube.com/watch?v=4s1YzgrRR2A
