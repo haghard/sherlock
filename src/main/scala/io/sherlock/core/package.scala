@@ -1,7 +1,7 @@
 package io.sherlock
 
 import scala.concurrent.Future
-import akka.http.scaladsl.server.{ RequestContext, Route, RouteResult }
+import akka.http.scaladsl.server.{RequestContext, Route, RouteResult}
 
 //https://medium.com/iterators/extending-requestcontext-in-akka-http-for-fun-and-profit-ceb056964758
 package object core {
@@ -21,7 +21,7 @@ package object core {
     def tapply(f: T ⇒ TenantRoute): TenantRoute
   }
 
-  type TenantDirective0 = TenantDirective[Unit]
+  type TenantDirective0    = TenantDirective[Unit]
   type TenantDirective1[T] = TenantDirective[T]
 
   /*private case object ExtractDecoded extends TenantDirective1[Decoded] {
@@ -32,5 +32,5 @@ package object core {
   private case object ExtractClaims extends JwtDirective1[Claims] {
     override def tapply(inner: (Claims) => JwtRoute): JwtRoute = ctx => inner(ctx.decoded.claims)(ctx)
   }
-  */
+   */
 }

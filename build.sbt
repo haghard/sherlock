@@ -1,5 +1,5 @@
-import com.typesafe.sbt.SbtScalariform.ScalariformKeys
-import scalariform.formatter.preferences._
+//import com.typesafe.sbt.SbtScalariform.ScalariformKeys
+//import scalariform.formatter.preferences._
 
 name := "sherlock"
 version := "0.0.1"
@@ -22,10 +22,17 @@ resolvers ++= Seq(
 
 updateOptions := updateOptions.value.withCachedResolution(true)
 
+
+scalafmtOnCompile := true
+
+/*
 ScalariformKeys.preferences := ScalariformKeys.preferences.value
   .setPreference(AlignParameters, true)
   .setPreference(AlignSingleLineCaseStatements, true)
   .setPreference(RewriteArrowSymbols, true)
+*/
+
+
 
 //comment out for test:run
 //fork in run := true

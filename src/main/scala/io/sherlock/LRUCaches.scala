@@ -2,17 +2,23 @@ package io.sherlock
 
 import scala.collection.mutable
 import scala.concurrent.Future
-import scala.concurrent.duration.{ Deadline, FiniteDuration }
+import scala.concurrent.duration.{Deadline, FiniteDuration}
 
 //  https://stackoverflow.com/questions/23772102/lru-cache-in-java-with-generics-and-o1-operations
 object LRUCaches {
 
-  class Node[T, U](var previous: Node[T, U] = null, var next: Node[T, U] = null,
-                   val key: T = null.asInstanceOf[T], val value: U = null.asInstanceOf[U])
+  class Node[T, U](
+    var previous: Node[T, U] = null,
+    var next: Node[T, U] = null,
+    val key: T = null.asInstanceOf[T],
+    val value: U = null.asInstanceOf[U]
+  )
 
   class Node0[T, U](
     var next: Node0[T, U] = null,
-    val key:  T           = null.asInstanceOf[T], val value: U = null.asInstanceOf[U])
+    val key: T = null.asInstanceOf[T],
+    val value: U = null.asInstanceOf[U]
+  )
 
   object LRUCache {
     def apply[K, V](capacity: Int) = {
@@ -22,25 +28,23 @@ object LRUCaches {
   }
 
   class LRUCache0[K, V](capacity: Int) {
-    private val map = new java.util.HashMap[K, V]()
+    private val map        = new java.util.HashMap[K, V]()
     private val linkedList = new java.util.LinkedList[K]()
 
     def get(key: K): Option[V] = {
       val targetValue = map.get(key)
       if (targetValue == null) None
+      else if (linkedList.peekLast == key)
+        Some(targetValue)
       else {
-        if (linkedList.peekLast == key)
-          Some(targetValue)
-        else {
-          //O(n)
-          linkedList.remove(key)
-          linkedList.addLast(key)
-          Some(targetValue)
-        }
+        //O(n)
+        linkedList.remove(key)
+        linkedList.addLast(key)
+        Some(targetValue)
       }
     }
 
-    def put(key: K, value: V): Unit = {
+    def put(key: K, value: V): Unit =
       if (!map.containsKey(key)) {
         linkedList.addLast(key)
         map.put(key, value)
@@ -51,7 +55,6 @@ object LRUCaches {
           map.remove(evicted)
         }
       }
-    }
 
     def size = map.size
 
@@ -64,8 +67,12 @@ object LRUCaches {
     }
   }
 
-  class LRUCache[K, V](capacity: Int, cache: java.util.Map[K, Node[K, V]],
-                       var leastRU: Node[K, V], var mostRU: Node[K, V]) {
+  class LRUCache[K, V](
+    capacity: Int,
+    cache: java.util.Map[K, Node[K, V]],
+    var leastRU: Node[K, V],
+    var mostRU: Node[K, V]
+  ) {
     private var currentSize: Int = 0
 
     //  O(1)
@@ -95,7 +102,7 @@ object LRUCaches {
     }
 
     //  O(1)
-    def put(key: K, value: V): Unit = {
+    def put(key: K, value: V): Unit =
       if (!cache.containsKey(key)) {
         val newNode = new Node[K, V](mostRU, null, key, value)
         mostRU.next = newNode
@@ -109,24 +116,20 @@ object LRUCaches {
           leastRU.previous = null
         } // Update cache size, for the first added entry update the LRU pointer
         else if (currentSize < capacity) {
-          if (currentSize == 0) {
+          if (currentSize == 0)
             leastRU = newNode
-          }
           currentSize += 1
         }
       }
-    }
 
     def size: Int = currentSize
 
     override def toString: String = {
-      def loopMap(it: java.util.Iterator[K], sb: mutable.StringBuilder,
-                  first: Boolean = false): String = {
+      def loopMap(it: java.util.Iterator[K], sb: mutable.StringBuilder, first: Boolean = false): String =
         if (it.hasNext)
           if (first) loopMap(it, sb.append(it.next))
           else loopMap(it, sb.append(",").append(it.next))
         else sb.toString
-      }
 
       def loopList(n: Node[K, V], sb: mutable.StringBuilder): String = {
         val sb0 =
@@ -137,7 +140,7 @@ object LRUCaches {
       }
 
       loopList(leastRU, new mutable.StringBuilder().append("list:")) +
-        loopMap(cache.keySet.iterator, new mutable.StringBuilder().append("map:"), true)
+      loopMap(cache.keySet.iterator, new mutable.StringBuilder().append("map:"), true)
     }
   }
 
@@ -154,7 +157,7 @@ object LRUCaches {
         value
       }
 
-    def put(key: K, value: V): Unit = {
+    def put(key: K, value: V): Unit =
       if (!data.containsKey(key)) {
         if (data.keySet.size == capacity) {
           //remove least recently used element (head)
@@ -165,15 +168,13 @@ object LRUCaches {
         //move the element to the most recently used position(tail)
         data.put(key, value)
       }
-    }
 
     override def toString: String = {
-      def loop(it: java.util.Iterator[K], sb: mutable.StringBuilder, first: Boolean = false): String = {
+      def loop(it: java.util.Iterator[K], sb: mutable.StringBuilder, first: Boolean = false): String =
         if (it.hasNext)
           if (first) loop(it, sb.append(it.next))
           else loop(it, sb.append(",").append(it.next))
         else sb.toString
-      }
 
       loop(data.keySet.iterator, new mutable.StringBuilder, true)
     }
@@ -186,13 +187,11 @@ object LRUCaches {
       size() > capacity
 
     override def toString: String = {
-      def loop(it: java.util.Iterator[K], sb: mutable.StringBuilder,
-               first: Boolean = false): String = {
+      def loop(it: java.util.Iterator[K], sb: mutable.StringBuilder, first: Boolean = false): String =
         if (it.hasNext)
           if (first) loop(it, sb.append(it.next))
           else loop(it, sb.append(",").append(it.next))
         else sb.toString
-      }
 
       loop(keySet.iterator, new mutable.StringBuilder, true)
     }
@@ -236,7 +235,7 @@ object LRUCaches {
 
     var currentSize: Int = 0
 
-    def put(uuid: String, req: T): Boolean = {
+    def put(uuid: String, req: T): Boolean =
       if (cache.containsKey(uuid)) false
       else {
         val newNode = new Node0[String, T](null, uuid, req)
@@ -261,7 +260,6 @@ object LRUCaches {
         }
         true
       }
-    }
 
     def get(uuid: String): Option[T] =
       Option(cache.get(uuid)).map(_.value)
@@ -280,14 +278,12 @@ object LRUCaches {
       }
 
       loopList(head, new mutable.StringBuilder().append("list:")) +
-        loopMap(cache.keySet.iterator, new mutable.StringBuilder().append("cache:"), true)
+      loopMap(cache.keySet.iterator, new mutable.StringBuilder().append("cache:"), true)
     }
   }
 
   //double -linked list
-  class RequestCache[T](
-    capacity:          Int,
-    private val empty: Node[String, T] = new Node[String, T]()) {
+  class RequestCache[T](capacity: Int, private val empty: Node[String, T] = new Node[String, T]()) {
 
     private var currentSize: Int = 0
 
@@ -297,7 +293,7 @@ object LRUCaches {
     var head: Node[String, T] = empty
     var tail: Node[String, T] = empty
 
-    def put(uuid: String, req: T): Boolean = {
+    def put(uuid: String, req: T): Boolean =
       if (cache.containsKey(uuid)) false
       else {
         val newNode = new Node[String, T](tail, null, uuid, req)
@@ -317,7 +313,6 @@ object LRUCaches {
         }
         true
       }
-    }
 
     def get(uuid: String): Option[T] =
       Option(cache.get(uuid)).map(_.value)
@@ -336,7 +331,7 @@ object LRUCaches {
       }
 
       loopList(head, new mutable.StringBuilder().append("list:")) +
-        loopMap(cache.keySet.iterator, new mutable.StringBuilder().append("cache:"), true)
+      loopMap(cache.keySet.iterator, new mutable.StringBuilder().append("cache:"), true)
     }
   }
 

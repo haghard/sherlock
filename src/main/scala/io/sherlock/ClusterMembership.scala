@@ -1,7 +1,7 @@
 package io.sherlock
 
-import akka.actor.{ Actor, ActorLogging, Props }
-import akka.cluster.{ Cluster, Member, MemberStatus }
+import akka.actor.{Actor, ActorLogging, Props}
+import akka.cluster.{Cluster, Member, MemberStatus}
 import akka.cluster.ClusterEvent._
 
 import scala.collection.immutable.SortedSet

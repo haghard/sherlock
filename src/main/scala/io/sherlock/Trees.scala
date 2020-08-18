@@ -1,6 +1,6 @@
 package io.sherlock
 
-import play.api.libs.json.{ JsArray, JsBoolean, JsNumber, JsObject, JsString, JsValue, Json }
+import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString, JsValue, Json}
 
 import scala.collection.Map
 
@@ -31,9 +31,8 @@ object Trees {
 
       stack = stack.tail
 
-      if (cur.children.nonEmpty) {
+      if (cur.children.nonEmpty)
         stack = cur.children ::: stack
-      }
     }
   }
 
@@ -43,38 +42,51 @@ object Trees {
   def outK0(k: String): Unit =
     print(s"""{"$k":""")
 
-  def outV(cur: JsValue): Unit = cur match {
-    case JsString(value) ⇒
-      print(s""""$value",""")
-    case JsBoolean(b) ⇒
-      print(s"""$b,""")
-    case JsNumber(n) ⇒
-      print(s"""$n,""")
-    case JsObject(_) ⇒
-      print(s"""{""")
-  }
+  def outV(cur: JsValue): Unit =
+    cur match {
+      case JsString(value) ⇒
+        print(s""""$value",""")
+      case JsBoolean(b) ⇒
+        print(s"""$b,""")
+      case JsNumber(n) ⇒
+        print(s"""$n,""")
+      case JsObject(_) ⇒
+        print(s"""{""")
+    }
 
-  val jsValue0 = JsObject(Map(
-    "a" -> JsObject(Map("a1" -> JsObject(Map("a11" -> JsNumber(1), "a12" -> JsNumber(2))))),
-    "b" -> JsObject(Map("b1" -> JsObject(Map("b11" -> JsNumber(3), "b12" -> JsNumber(4))))),
-    "c" -> JsObject(Map("c1" -> JsObject(Map("c11" -> JsNumber(5)))))))
+  val jsValue0 = JsObject(
+    Map(
+      "a" → JsObject(Map("a1" → JsObject(Map("a11" → JsNumber(1), "a12" → JsNumber(2))))),
+      "b" → JsObject(Map("b1" → JsObject(Map("b11" → JsNumber(3), "b12" → JsNumber(4))))),
+      "c" → JsObject(Map("c1" → JsObject(Map("c11" → JsNumber(5)))))
+    )
+  )
 
-  val jsValue1 = JsObject(Map(
-    "a" -> JsObject(Map("a1" -> JsNumber(1), "a2" -> JsNumber(2))),
-    "b" -> JsObject(Map("b1" -> JsNumber(3))),
-    "c" -> JsObject(Map("c1" -> JsNumber(4)))))
+  val jsValue1 = JsObject(
+    Map(
+      "a" → JsObject(Map("a1" → JsNumber(1), "a2" → JsNumber(2))),
+      "b" → JsObject(Map("b1" → JsNumber(3))),
+      "c" → JsObject(Map("c1" → JsNumber(4)))
+    )
+  )
 
-  val jsValue3 = JsObject(Map("a1" -> JsNumber(1), "a2" -> JsNumber(2)))
+  val jsValue3 = JsObject(Map("a1" → JsNumber(1), "a2" → JsNumber(2)))
 
-  val jsValue2 = JsObject(Map(
-    "a" -> JsObject(Map("a1" -> JsNumber(1))),
-    "b" -> JsObject(Map("b1" -> JsObject(Map("b11" -> JsString("1"), "b12" -> JsNumber(2))))),
-    "c" -> JsObject(Map("c1" -> JsObject(Map("c11" -> JsString("1")))))))
+  val jsValue2 = JsObject(
+    Map(
+      "a" → JsObject(Map("a1" → JsNumber(1))),
+      "b" → JsObject(Map("b1" → JsObject(Map("b11" → JsString("1"), "b12" → JsNumber(2))))),
+      "c" → JsObject(Map("c1" → JsObject(Map("c11" → JsString("1")))))
+    )
+  )
 
-  val jsValue = JsObject(Map(
-    "a" -> JsObject(Map("a1" -> JsObject(Map("a11" -> JsNumber(1), "a12" -> JsString("2"))))),
-    "b" -> JsObject(Map("b1" -> JsObject(Map("b11" -> JsString("1"), "b12" -> JsObject(Map("b21" -> JsNumber(2))))))),
-    "c" -> JsObject(Map("c1" -> JsObject(Map("c11" -> JsString("1")))))))
+  val jsValue = JsObject(
+    Map(
+      "a" → JsObject(Map("a1" → JsObject(Map("a11" → JsNumber(1), "a12" → JsString("2"))))),
+      "b" → JsObject(Map("b1" → JsObject(Map("b11" → JsString("1"), "b12" → JsObject(Map("b21" → JsNumber(2))))))),
+      "c" → JsObject(Map("c1" → JsObject(Map("c11" → JsString("1")))))
+    )
+  )
 
   Json.stringify(jsValue)
   new String(Json.toBytes(jsValue))
@@ -86,24 +98,25 @@ object Trees {
 
     override def decodeValue(in: JsonReader, default: JsObject): JsObject = ???
 
-    def outVal(cur: JsValue, out: JsonWriter): Unit = cur match {
-      case JsString(value) ⇒
-        out.writeVal(value)
-      case JsBoolean(b) ⇒
-        out.writeVal(b)
-      case JsNumber(n) ⇒
-        out.writeVal(n)
-      case JsObject(_) ⇒
-        out.writeObjectStart()
-    }
+    def outVal(cur: JsValue, out: JsonWriter): Unit =
+      cur match {
+        case JsString(value) ⇒
+          out.writeVal(value)
+        case JsBoolean(b) ⇒
+          out.writeVal(b)
+        case JsNumber(n) ⇒
+          out.writeVal(n)
+        case JsObject(_) ⇒
+          out.writeObjectStart()
+      }
 
     //http://www.lihaoyi.com/post/ZeroOverheadTreeProcessingwiththeVisitorPattern.html#tree-construction-visitors
     //https://blog.leifbattermann.de/2017/10/08/error-and-state-handling-with-monad-transformers-in-scala/
     def loop(js: JsValue, out: JsonWriter, stack: List[Map[String, JsValue]], keys: List[String]): Unit =
       js match {
         case JsObject(kvs) if kvs.nonEmpty ⇒
-          val k = kvs.keysIterator.next
-          val js = kvs(k)
+          val k    = kvs.keysIterator.next
+          val js   = kvs(k)
           val rest = kvs - k
           out.writeKey(k)
           if (rest.nonEmpty) loop(js, out, rest :: stack, keys)
@@ -114,7 +127,7 @@ object Trees {
           else {
             val map = stack.head
             if (map.nonEmpty) {
-              val k = map.keysIterator.next
+              val k  = map.keysIterator.next
               val js = map(k)
               out.writeKey(k)
               val rest = map - k
@@ -125,10 +138,10 @@ object Trees {
       }
 
     def go(js: JsObject, out: JsonWriter): Unit = {
-      val kvs = js.value
+      val kvs  = js.value
       val keys = kvs.keysIterator.toList
-      val k = keys.head
-      val v = kvs(k)
+      val k    = keys.head
+      val v    = kvs(k)
       out.writeObjectStart()
       out.writeKey(k)
       loop(v, out, List(kvs - k), k :: Nil)
@@ -149,8 +162,8 @@ object Trees {
     def loop(js: JsValue, stack: List[Map[String, JsValue]]): Unit =
       js match {
         case JsObject(kvs) if kvs.nonEmpty ⇒
-          val k = kvs.keysIterator.next
-          val js = kvs(k)
+          val k    = kvs.keysIterator.next
+          val js   = kvs(k)
           val rest = kvs - k
           outK0(k)
           if (rest.nonEmpty) loop(js, rest :: stack)
@@ -161,7 +174,7 @@ object Trees {
           else {
             val obj = stack.head
             if (obj.nonEmpty) {
-              val k = obj.keysIterator.next
+              val k  = obj.keysIterator.next
               val js = obj(k)
               outK(k)
               val rest = obj - k
@@ -172,8 +185,8 @@ object Trees {
       }
 
     val kvs = tree.value
-    val k = kvs.keysIterator.next
-    val v = kvs(k)
+    val k   = kvs.keysIterator.next
+    val v   = kvs(k)
     print("{")
     outK(k)
 
@@ -186,7 +199,9 @@ object Trees {
     @annotation.tailrec
     def loop(cur: Tree[A], visitNext: List[Tree[A]]): Unit = {
       f(cur.value)
-      println(s"${cur.value} - chs:[${cur.children.map(_.value).mkString(",")}] - stack:[${visitNext.map(_.value).mkString(",")}]")
+      println(
+        s"${cur.value} - chs:[${cur.children.map(_.value).mkString(",")}] - stack:[${visitNext.map(_.value).mkString(",")}]"
+      )
       cur.children match {
         case head :: tail ⇒
           loop(head, tail ::: visitNext)
@@ -220,11 +235,13 @@ object Trees {
   val t =
     Tree(
       "root",
-      Tree("a", Tree(
-        "a1",
-        Tree("a11") :: Tree("a12") :: Nil) :: Tree("a2", Tree("a21") :: Tree("a22") :: Nil) :: Nil) ::
-        Tree("b", Tree("b1") :: Tree("b2") :: Nil) ::
-        Tree("c", Tree("c1") :: Tree("c2") :: Tree("c3") :: Nil) :: Nil)
+      Tree(
+        "a",
+        Tree("a1", Tree("a11") :: Tree("a12") :: Nil) :: Tree("a2", Tree("a21") :: Tree("a22") :: Nil) :: Nil
+      ) ::
+      Tree("b", Tree("b1") :: Tree("b2") :: Nil) ::
+      Tree("c", Tree("c1") :: Tree("c2") :: Tree("c3") :: Nil) :: Nil
+    )
 
   traverseDF(t)(println(_))
   traverseDF2(t)(println(_))
@@ -255,7 +272,7 @@ object Trees {
     3. All leaves (NIL) are black.
     4. If a node is red, then both its children are black.
     5. Every path from a given node to any of its descendant NIL nodes contains the same number of black nodes.
-  */
+   */
 
   sealed trait Color[+A] {
     def elem: A
@@ -282,29 +299,27 @@ object Trees {
 
   case class Node[+A](left: RBTree[A], elem: Color[A], right: RBTree[A]) extends RBTree[A]
 
-  def find[A](element: A, tree: RBTree[A], cnt: Long = 0l)(implicit ord: Ordering[A]): (Option[A], Long) = {
+  def find[A](element: A, tree: RBTree[A], cnt: Long = 0L)(implicit ord: Ordering[A]): (Option[A], Long) =
     tree match {
       case Leaf ⇒ (None, cnt)
       case Node(left, elem, right) ⇒
         import ord._
         val e = elem.element
-        if (element < e) find(element, left, cnt + 1l)
-        else if (element > e) find(element, right, cnt + 1l)
+        if (element < e) find(element, left, cnt + 1L)
+        else if (element > e) find(element, right, cnt + 1L)
         else (Some(e), cnt)
     }
-  }
 
-  def contains[A](element: A, tree: RBTree[A], cnt: Long = 0l)(implicit ord: Ordering[A]): (Boolean, Long) = {
+  def contains[A](element: A, tree: RBTree[A], cnt: Long = 0L)(implicit ord: Ordering[A]): (Boolean, Long) =
     tree match {
       case Leaf ⇒ (false, cnt)
       case Node(left, elem, right) ⇒
         import ord._
         val e = elem.element
-        if (element < e) contains(element, left, cnt + 1l)
-        else if (element > e) contains(element, right, cnt + 1l)
+        if (element < e) contains(element, left, cnt + 1L)
+        else if (element > e) contains(element, right, cnt + 1L)
         else (true, cnt)
     }
-  }
 
   def +[A](element: A, tree: RBTree[A])(implicit ord: Ordering[A]): RBTree[A] =
     insert(element, tree)
@@ -324,7 +339,7 @@ object Trees {
     }
 
     // result is always the same
-    def balance(left: RBTree[A], c: Color[A], right: RBTree[A]): RBTree[A] = {
+    def balance(left: RBTree[A], c: Color[A], right: RBTree[A]): RBTree[A] =
       (left, c, right) match {
         case (Node(Node(a, Red(x), b), Red(y), c), Black(z), d) ⇒
           Node(Node(a, Black(x), b), Red(y), Node(c, Black(z), d))
@@ -336,19 +351,20 @@ object Trees {
           Node(Node(a, Black(x), b), Red(y), Node(c, Black(z), d))
         case _ ⇒ Node(left, c, right)
       }
-    }
 
     ins(tree)
   }
 
   //this tree doesn't work, smth is wrong with balancing. USE io.sherlock.RBTree
 
-  val size = 500
+  val size              = 500
   val root: RBTree[Int] = Node(Leaf, Black(0), Leaf)
-  val entries = scala.util.Random.shuffle((1 to size).toVector)
-  val myTree = entries.foldLeft(root)((acc, i) ⇒ insert(i, acc))
-  entries.foldLeft(0) { (acc, i) ⇒ math.max(acc, contains(i, myTree)._2.toInt) }
-  entries.foldLeft(0) { (acc, i) ⇒ if (acc == 0) contains(i, myTree)._2.toInt else math.min(acc, contains(i, myTree)._2.toInt) }
+  val entries           = scala.util.Random.shuffle((1 to size).toVector)
+  val myTree            = entries.foldLeft(root)((acc, i) ⇒ insert(i, acc))
+  entries.foldLeft(0)((acc, i) ⇒ math.max(acc, contains(i, myTree)._2.toInt))
+  entries.foldLeft(0) { (acc, i) ⇒
+    if (acc == 0) contains(i, myTree)._2.toInt else math.min(acc, contains(i, myTree)._2.toInt)
+  }
 
   import com.abahgat.suffixtree.GeneralizedSuffixTree
 
@@ -368,9 +384,9 @@ object Trees {
   //A Buffer implementation backed by a list. It provides constant time prepend and append.
   // Most other operations are linear.
   val lb = scala.collection.mutable.ListBuffer[Int]()
-  lb += 1 //append
+  lb += 1    //append
   lb.+=:(90) //prepend
-  lb(1) //random access linear
+  lb(1)      //random access linear
 
   //An implementation of the Buffer class using an array to represent the assembled sequence internally.
   // Append, update and random access take constant time (amortized time). Prepends and removes are linear in the buffer size.

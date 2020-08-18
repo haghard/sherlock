@@ -8,7 +8,7 @@ import net.jtownson.swakka.routegen.SwaggerRouteSettings
 import net.jtownson.swakka.model.Responses.ResponseValue
 import net.jtownson.swakka.jsonschema.SchemaWriter._
 import net.jtownson.swakka.OpenApiJsonProtocol._
-*/
+ */
 
 /*
 
@@ -43,4 +43,4 @@ class SwaggerApi {
   val route =
     RouteGen.openApiRoute(swaggerDescriptor, swaggerRouteSettings = Some(SwaggerRouteSettings()))
 }
-*/
+ */

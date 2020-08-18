@@ -26,7 +26,12 @@ import scala.util.{Failure, Success, Try}
 object SqubsExamples {
 
   def timedSource(
-    delay: FiniteDuration, interval: FiniteDuration, limit: Int, name: String, start: Int = 0): Source[Int, akka.NotUsed] =
+    delay: FiniteDuration,
+    interval: FiniteDuration,
+    limit: Int,
+    name: String,
+    start: Int = 0
+  ): Source[Int, akka.NotUsed] =
     Source.fromGraph(
       GraphDSL.create() { implicit b ⇒
         import GraphDSL.Implicits._
@@ -34,10 +39,10 @@ object SqubsExamples {
         val tickSource = Source.tick(delay, interval, ())
         val dataSource = Source.fromIterator(() ⇒ Iterator.range(start, limit))
 
-        val sendOut = b.add(Flow[Int].map { x ⇒ x })
+        val sendOut = b.add(Flow[Int].map(x ⇒ x))
 
         // we use zip to throttle the stream
-        val zip = b.add(Zip[Unit, Int]())
+        val zip   = b.add(Zip[Unit, Int]())
         val unzip = b.add(Flow[(Unit, Int)].map(_._2))
 
         // setup the message flow
@@ -46,19 +51,18 @@ object SqubsExamples {
 
         zip.out ~> unzip ~> sendOut
         SourceShape(sendOut.outlet)
-      })
-
+      }
+    )
 
   def scenario24(implicit sys: ActorSystem) = {
 
-    def riskyOperation(in: String): Try[String] = {
+    def riskyOperation(in: String): Try[String] =
       ???
-    }
 
     //https://squbs.readthedocs.io/en/latest/flow-retry/
     //https://www.infoq.com/presentations/squbs/
-    val retry = Retry[String, String, UUID](max = 10)
-    val riskyFlow = Flow[(String, UUID)].map { case (s, ctx) => (riskyOperation(s), ctx) }
+    val retry     = Retry[String, String, UUID](max = 10)
+    val riskyFlow = Flow[(String, UUID)].map { case (s, ctx) ⇒ (riskyOperation(s), ctx) }
 
     //SourceWithContext ???
     //https://blog.softwaremill.com/painlessly-passing-message-context-through-akka-streams-1615b11efc2c
@@ -79,17 +83,18 @@ object SqubsExamples {
         |reset-timeout = 1000 ms
         |max-reset-timeout = 2 seconds
         |exponential-backoff-factor = 2.0
-      """.stripMargin)
+      """.stripMargin
+    )
 
     //maxFailures=2, callTimeout=100.millis, resetTimeout=1.second
     val state = AtomicCircuitBreakerState("x", config) //(sys.dispatcher, sys.scheduler)
-    val cb = CircuitBreaker(CircuitBreakerSettings[String, String, UUID](state))
+    val cb    = CircuitBreaker(CircuitBreakerSettings[String, String, UUID](state))
 
     val flow = Flow[(String, UUID)].mapAsyncUnordered(4) { elem ⇒
       Future {
         ("", UUID.randomUUID)
       }(sys.dispatcher)
-      //(ref ? elem).mapTo[(String, UUID)]
+    //(ref ? elem).mapTo[(String, UUID)]
     }
 
     Source("a" :: "b" :: "c" :: Nil)
@@ -117,12 +122,12 @@ object SqubsExamples {
       It works like the Akka Streams buffer with the difference that the content of the buffer is stored in a series of memory-mapped files
       in the directory given at construction of the PersistentBuffer. This allows the buffer size to be virtually limitless,
       not use the JVM heap for storage, and have extremely good performance in the range of a million messages/second at the same time.
-   */
+     */
 
     //IDEA: to use PersistentBuffer as a commit log
-    val file = new File("~/Projects/sherlock/disk-buffers/pqueue-22")
+    val file    = new File("~/Projects/sherlock/disk-buffers/pqueue-22")
     val pBuffer = new org.squbs.pattern.stream.PersistentBufferAtLeastOnce[Int](file)
-    val commit = pBuffer.commit[Int]
+    val commit  = pBuffer.commit[Int]
 
     //val src0 = Source.fromIterator(() ⇒ Iterator.range(0, Int.MaxValue)).throttle(200, 1.second)
 
@@ -140,7 +145,7 @@ object SqubsExamples {
     src
       .via(pBuffer.async)
       //.mapAsync(1) { e => /*ask*/ }
-      .via(dbFlow.async("akka.blocking-dispatcher")) //AtLeastOnce so the writes should be idempotent
+      .via(dbFlow.async("akka.blocking-dispatcher", 1)) //AtLeastOnce so the writes should be idempotent
       .via(commit)
       .to(Sink.ignore)
   }
@@ -179,39 +184,45 @@ object SqubsExamples {
       .via(routeFlow)
   }*/
 
-  def httpFlow(sys: ActorSystem, parallelism: Int = 4) = {
-    Flow.fromGraph(GraphDSL.create() { implicit b ⇒
-      import GraphDSL.Implicits._
+  //Simular to https://github.com/hseeberger/accessus/blob/9d36dd703664565f4f1fe7b602bf4a48b0a87e8c/src/main/scala/rocks/heikoseeberger/accessus/Accessus.scala#L138
+  def httpFlow(sys: ActorSystem, parallelism: Int = 4) =
+    Flow.fromGraph(
+      GraphDSL.create() { implicit b ⇒
+        import GraphDSL.Implicits._
 
-      val enrichReq = b.add(Flow[HttpRequest].map(req ⇒ (req, (req, UUID.randomUUID.toString))))
-      val unzip = b.add(Unzip[HttpRequest, (HttpRequest, String)]())
-      val bcastRes = b.add(Broadcast[HttpResponse](2))
-      val zip = b.add(Zip[(HttpRequest, String), HttpResponse])
-      val ask = b.add(Flow[HttpRequest].mapAsync(2) { req: HttpRequest ⇒
-        Future { null.asInstanceOf[HttpResponse] }(???)
-      })
+        val enrichReq = b.add(Flow[HttpRequest].map(req ⇒ (req, (req, UUID.randomUUID.toString))))
+        val unzip     = b.add(Unzip[HttpRequest, (HttpRequest, String)]())
+        val bcastRes  = b.add(Broadcast[HttpResponse](2))
+        val zip       = b.add(Zip[(HttpRequest, String), HttpResponse])
+        val ask = b.add(Flow[HttpRequest].mapAsync(1) { req: HttpRequest ⇒
+          Future(null.asInstanceOf[HttpResponse])(???)
+        })
 
-      //val q = b.add(Source.queue[(HttpRequest, String)](32, OverflowStrategy.dropNew))
+        //val q = b.add(Source.queue[(HttpRequest, String)](32, OverflowStrategy.dropNew))
 
-      // format: off
+        // format: off
       enrichReq ~> unzip.in
-      unzip.out0 ~> ask ~> bcastRes
-      bcastRes.out(1) ~> zip.in1
-      unzip.out1 ~> zip.in0
-      zip.out ~> Sink.foreach(???)
-
+                   unzip.out0 ~> ask ~> bcastRes
+                                        bcastRes.out(1) ~> zip.in1
+                   unzip.out1 ~> zip.in0
+                                 zip.out ~> Sink.foreach(???)
       // format: on
-      //???
-      FlowShape(enrichReq.in, bcastRes.out(0))
-    })
-  }
+        FlowShape(enrichReq.in, bcastRes.out(0))
+      }
+    )
 
   val ocHeader = "Unavailable"
 
-  def bidiHttpFlow(sys: ActorSystem, maxInFlight: Int = 1 << 5, parallelism: Int = 4): BidiFlow[HttpRequest, (String, HttpRequest), (String, HttpRequest), HttpRequest, akka.NotUsed] = {
+  def bidiHttpFlow(
+    sys: ActorSystem,
+    maxInFlight: Int = 1 << 5,
+    parallelism: Int = 4
+  ): BidiFlow[HttpRequest, (String, HttpRequest), (String, HttpRequest), HttpRequest, akka.NotUsed] = {
 
-    def captureReq(ref: AtomicReference[Map[String, HttpRequest]])(updater: Map[String, HttpRequest] ⇒ Map[String, HttpRequest]): Unit = {
-      val map = ref.get
+    def captureReq(
+      ref: AtomicReference[Map[String, HttpRequest]]
+    )(updater: Map[String, HttpRequest] ⇒ Map[String, HttpRequest]): Unit = {
+      val map     = ref.get
       val updated = updater(map)
       if (ref.compareAndSet(map, updated)) () else captureReq(ref)(updater)
     }
@@ -223,37 +234,42 @@ object SqubsExamples {
         val reqInFlight = new AtomicReference(Map[String, HttpRequest]())
 
         val inbound: FlowShape[HttpRequest, (String, HttpRequest)] =
-          b.add(Flow[HttpRequest].mapAsync(parallelism) { req ⇒
-            val reqId = UUID.randomUUID.toString
-            //if (reqInFlight.get.size < maxInFlight) {
-            Future {
-              //import akka.pattern.ask
-              //tenantsRegion.ask
-              captureReq(reqInFlight)(_ + (reqId -> req))
-              sys.log.info(s"flies in -> {}", reqId)
-              //
-              Thread.sleep(4000)
-              (reqId, req)
-            }(sys.dispatcher)
+          b.add(
+            Flow[HttpRequest].mapAsync(parallelism) { req ⇒
+              val reqId = UUID.randomUUID.toString
+              //if (reqInFlight.get.size < maxInFlight) {
+              Future {
+                //import akka.pattern.ask
+                //tenantsRegion.ask
+                captureReq(reqInFlight)(_ + (reqId → req))
+                sys.log.info(s"flies in -> {}", reqId)
+                //
+                Thread.sleep(4000)
+                (reqId, req)
+              }(sys.dispatcher)
             /*} else {
               sys.log.info("reject -> {}", reqId)
               Future.successful((reqId, req.withHeaders(req.headers :+ RawHeader(ocHeader, "true"))))
             }*/
-          })
+            }
+          )
 
         val outbound: FlowShape[(String, HttpRequest), HttpRequest] =
-          b.add(Flow[(String, HttpRequest)].map {
-            case (reqId, req) ⇒
-              sys.log.info("Flies out -> {}", reqId)
+          b.add(
+            Flow[(String, HttpRequest)].map {
+              case (reqId, req) ⇒
+                sys.log.info("Flies out -> {}", reqId)
 
-              if (req.headers.find(_.name == ocHeader).isEmpty)
-                captureReq(reqInFlight)(_ - reqId)
+                if (req.headers.find(_.name == ocHeader).isEmpty)
+                  captureReq(reqInFlight)(_ - reqId)
 
-              sys.log.info(s"InFlight: [{}]", reqInFlight.get.keySet.mkString(","))
-              req
-          })
+                sys.log.info(s"InFlight: [{}]", reqInFlight.get.keySet.mkString(","))
+                req
+            }
+          )
         BidiShape.fromFlows(inbound, outbound)
-      })
+      }
+    )
   }
 
 }
@@ -269,7 +285,7 @@ final class HttpBidiFlow[In, Out] extends GraphStage[BidiShape[In, (In, String),
 
   //out <~ from
   val from = Inlet[(Out, String)]("from")
-  val out = Outlet[Out]("out")
+  val out  = Outlet[Out]("out")
 
   override val shape = BidiShape(in, to, from, out)
 
@@ -278,106 +294,115 @@ final class HttpBidiFlow[In, Out] extends GraphStage[BidiShape[In, (In, String),
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
     new GraphStageLogic(shape) with StageLogging {
-      var upstreamFinished = false
-      val outBuffer = mutable.Queue[(Out, String)]()
+      var upstreamFinished                           = false
+      val outBuffer                                  = mutable.Queue[(Out, String)]()
       var callback: AsyncCallback[Try[(In, String)]] = _
 
-      override def preStart(): Unit = {
+      override def preStart(): Unit =
         callback = getAsyncCallback[Try[(In, String)]](resAvailable)
-      }
 
       def onPushFrom(elem: Out, reqId: String, isOutAvailable: Boolean): Option[(Out, String)] = {
         outBuffer.enqueue((elem, reqId))
         if (isOutAvailable) Some(outBuffer.dequeue) else None
       }
 
-      def resAvailable(res: Try[(In, String)]) = {
-        res.fold({ err ⇒ ??? }, {
-          case (elem, reqId) ⇒
-            push(to, (elem, reqId))
-        })
-      }
+      def resAvailable(res: Try[(In, String)]) =
+        res.fold(
+          err ⇒ ???,
+          {
+            case (elem, reqId) ⇒
+              push(to, (elem, reqId))
+          }
+        )
 
-      setHandler(in, new InHandler {
-        override def onPush(): Unit = {
-          implicit val ec = materializer.executionContext
-          val elem = grab(in)
-          //ask
-          Future {
-            val reqId = UUID.randomUUID.toString
-            log.info("In:{}. AsyncCallInProgress:{}", reqId, asyncCallInFlight.incrementAndGet)
-            Thread.sleep(4000)
-            (elem, reqId)
-          }.onComplete(callback.invoke)
+      setHandler(
+        in,
+        new InHandler {
+          override def onPush(): Unit = {
+            implicit val ec = materializer.executionContext
+            val elem        = grab(in)
+            //ask
+            Future {
+              val reqId = UUID.randomUUID.toString
+              log.info("In:{}. AsyncCallInProgress:{}", reqId, asyncCallInFlight.incrementAndGet)
+              Thread.sleep(4000)
+              (elem, reqId)
+            }.onComplete(callback.invoke)
 
-          //inBuffer.enqueue((elem, reqId))
-          // emulate downstream asking for data by calling onPull on the outlet port
-          //getHandler(to).onPull()
-          //push(to, (elem, reqId))
+            //inBuffer.enqueue((elem, reqId))
+            // emulate downstream asking for data by calling onPull on the outlet port
+            //getHandler(to).onPull()
+            //push(to, (elem, reqId))
+          }
+
+          override def onUpstreamFinish(): Unit               = complete(to)
+          override def onUpstreamFailure(ex: Throwable): Unit = fail(to, ex)
         }
+      )
 
-        override def onUpstreamFinish(): Unit = complete(to)
-        override def onUpstreamFailure(ex: Throwable): Unit = fail(to, ex)
-      })
-
-      setHandler(to, new OutHandler {
-        override def onPull(): Unit = {
-          /*inBuffer.dequeueFirst((_: (In, String)) ⇒ true)
+      setHandler(
+        to,
+        new OutHandler {
+          override def onPull(): Unit =
+            /*inBuffer.dequeueFirst((_: (In, String)) ⇒ true)
             .foreach {
               case (elem, reqId) ⇒
                 push(to, (elem, reqId))
             }*/
-          if (!hasBeenPulled(in)) pull(in)
+            if (!hasBeenPulled(in)) pull(in)
+
+          override def onDownstreamFinish(): Unit = completeStage()
         }
+      )
 
-        override def onDownstreamFinish(): Unit = completeStage()
-      })
+      setHandler(
+        from,
+        new InHandler {
+          override def onPush(): Unit = {
+            val (elem, reqId) = grab(from)
+            log.info("Out:{}. AsyncCallInProgress:{}", reqId, asyncCallInFlight.decrementAndGet)
+            outBuffer.enqueue((elem, reqId))
+            // emulate downstream asking for data by calling onPull on the outlet port
+            getHandler(out).onPull()
 
-      setHandler(from, new InHandler {
-        override def onPush(): Unit = {
-          val (elem, reqId) = grab(from)
-          log.info("Out:{}. AsyncCallInProgress:{}", reqId, asyncCallInFlight.decrementAndGet)
-          outBuffer.enqueue((elem, reqId))
-          // emulate downstream asking for data by calling onPull on the outlet port
-          getHandler(out).onPull()
-
-          /*onPushFrom(elem, reqId, isAvailable(out))
+            /*onPushFrom(elem, reqId, isAvailable(out))
             .foreach {
               case (elem, reqId) ⇒
                 log.info("from ~> out: {}", reqId)
                 push(out, elem)
             }*/
+          }
+
+          override def onUpstreamFinish(): Unit =
+            if (outBuffer.isEmpty) completeStage()
+            else upstreamFinished = true
+
+          override def onUpstreamFailure(ex: Throwable): Unit = fail(out, ex)
         }
+      )
 
-        override def onUpstreamFinish(): Unit = {
-          if (outBuffer.isEmpty) completeStage()
-          else upstreamFinished = true
+      setHandler(
+        out,
+        new OutHandler {
+          override def onPull(): Unit =
+            // we query here because we artificially calls onPull
+            // and we must not violate the GraphStages guarantees
+            if (!upstreamFinished || outBuffer.nonEmpty) {
+              if (isAvailable(out))
+                //log.info("onPull Buffer: {}", outBuffer.size)
+                outBuffer.dequeueFirst((_: (Out, String)) ⇒ true) match {
+                  case Some((elem, reqId)) ⇒
+                    //log.info("push buffered: {} size: {}", reqId, outBuffer.size)
+                    //log.info("buffer ~> out: {}", reqId)
+                    push(out, elem)
+                  case None ⇒
+                    if (!hasBeenPulled(from)) pull(from)
+                    else if (!hasBeenPulled(in) && isAvailable(to)) pull(in)
+                }
+            } else complete(out)
+
+          override def onDownstreamFinish(): Unit = cancel(from)
         }
-
-        override def onUpstreamFailure(ex: Throwable): Unit = fail(out, ex)
-      })
-
-      setHandler(out, new OutHandler {
-        override def onPull(): Unit = {
-          // we query here because we artificially calls onPull
-          // and we must not violate the GraphStages guarantees
-          if (!upstreamFinished || outBuffer.nonEmpty) {
-            if (isAvailable(out)) {
-              //log.info("onPull Buffer: {}", outBuffer.size)
-              outBuffer.dequeueFirst((_: (Out, String)) ⇒ true) match {
-                case Some((elem, reqId)) ⇒
-                  //log.info("push buffered: {} size: {}", reqId, outBuffer.size)
-                  //log.info("buffer ~> out: {}", reqId)
-                  push(out, elem)
-                case None ⇒
-                  if (!hasBeenPulled(from)) pull(from)
-                  else if (!hasBeenPulled(in) && isAvailable(to)) pull(in)
-              }
-            }
-          } else complete(out)
-        }
-
-        override def onDownstreamFinish(): Unit = cancel(from)
-      })
+      )
     }
 }

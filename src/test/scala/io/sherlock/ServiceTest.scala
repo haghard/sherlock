@@ -1,8 +1,8 @@
 package io.sherlock
 
 import akka.actor.ActorSystem
-import akka.testkit.{ ImplicitSender, TestKit }
-import io.sherlock.core.{ HeartBeat, Service }
+import akka.testkit.{ImplicitSender, TestKit}
+import io.sherlock.core.{HeartBeat, Service}
 import org.scalatest.WordSpecLike
 
 import scala.util.Random

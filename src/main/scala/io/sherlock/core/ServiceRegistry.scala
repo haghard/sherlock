@@ -1,9 +1,9 @@
 package io.sherlock.core
 
-import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.cluster.Cluster
 import akka.cluster.ddata.Replicator._
-import akka.cluster.ddata.{ DistributedData, ORSet, ORSetKey }
+import akka.cluster.ddata.{DistributedData, ORSet, ORSetKey}
 import brave.propagation.TraceContext
 import io.sherlock.Main.conf
 
@@ -22,7 +22,7 @@ class ServiceRegistry extends Actor with ActorLogging {
   import net.ceedubs.ficus.Ficus._
 
   implicit val timeout = conf.as[FiniteDuration]("ts")
-  implicit val node = Cluster(context.system)
+  implicit val node    = Cluster(context.system)
 
   val DataKey = ORSetKey[String](self.path.name)
 
@@ -48,15 +48,16 @@ class ServiceRegistry extends Actor with ActorLogging {
     case m @ HeartBeatTrace(hb, cxt, tracer) ⇒
       //HeartBeat(_, path, _) ⇒
       val registrySpan = tracer.newChild(cxt).name("registry").start()
-      val serviceName = rootToName(hb.path)
+      val serviceName  = rootToName(hb.path)
       log.info(s"hb {} for {}", hb, serviceName)
       getOrCreateAndSubscribe(serviceName) ! m
       registrySpan.finish
     case Get(path) ⇒
       val rootName = rootToName(path)
       log.info("Get root name:{}", rootName)
-      context.child(rootName)
-        .fold(sender() ! Service.Result(Map.empty)) { instance ⇒ instance forward Service.GetAccuracy }
+      context
+        .child(rootName)
+        .fold(sender() ! Service.Result(Map.empty))(instance ⇒ instance forward Service.GetAccuracy)
     case change @ Changed(DataKey) ⇒
       val data = change.get(DataKey)
       log.info(s"[Registry-Replication] by key:{} elements:[{}]", DataKey, data.elements.mkString(","))

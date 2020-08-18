@@ -21,11 +21,11 @@ class LockFreeQueue[T] {
     val next = last.next.get
     if (last == tail.get) {
       val r =
-        if (next == null) {
+        if (next == null)
           if (last.next.compareAndSet(next, node))
             tail.compareAndSet(last, node)
           else false
-        } else tail.compareAndSet(last, next)
+        else tail.compareAndSet(last, next)
       if (r) () else lookFreeEnqLoop(node)
     } else lookFreeEnqLoop(node)
   }
@@ -33,22 +33,22 @@ class LockFreeQueue[T] {
   @scala.annotation.tailrec
   private final def lockFreeDeqLoop: Option[T] = {
     val first = head.get
-    val last = tail.get
-    val next = first.next.get
+    val last  = tail.get
+    val next  = first.next.get
 
-    if (first == head.get) {
-      if (first == last) {
+    if (first == head.get)
+      if (first == last)
         if (next == null) None
         else {
           tail.compareAndSet(last, next)
           lockFreeDeqLoop
         }
-      } else {
+      else {
         val v = next.value
         if (head.compareAndSet(first, next)) Some(v)
         else lockFreeDeqLoop
       }
-    } else lockFreeDeqLoop
+    else lockFreeDeqLoop
   }
 
   def enq(v: T): Unit =

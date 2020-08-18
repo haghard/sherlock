@@ -1,6 +1,6 @@
 package io.sherlock.core
 
-import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.cluster.Cluster
 import akka.cluster.ddata.Replicator._
 import akka.cluster.ddata._
@@ -20,19 +20,19 @@ object Service {
 /*
 _users_v1.0
 _users_v1.1
-*/
+ */
 
 class Service extends Actor with ActorLogging {
   import Service._
   import context.dispatcher
 
-  private val timeout = 3.seconds
+  private val timeout       = 3.seconds
   private val writeMajority = WriteMajority(timeout)
 
   implicit val node = Cluster(context.system)
 
   val replicator = DistributedData(context.system).replicator
-  val DataKey = ORSetKey[String](self.path.name)
+  val DataKey    = ORSetKey[String](self.path.name)
   replicator ! Subscribe(DataKey, self)
 
   implicit val askTimeout: Timeout = 3.seconds
@@ -52,15 +52,19 @@ class Service extends Actor with ActorLogging {
 
   override def receive = {
     case m @ HeartBeatTrace(hb, cxt, tracer) ⇒
-      val serviceSpan = tracer.newChild(cxt).name("service").start()
+      val serviceSpan   = tracer.newChild(cxt).name("service").start()
       val serviceTSName = s"${hb.ip}:${hb.port}"
       getOrCreateAndSubscribe(serviceTSName) ! m
       serviceSpan.finish()
     case GetAccuracy ⇒
-      val f = Future.traverse(context.children) { serviceTs ⇒
-        (serviceTs ? GetAccuracy).mapTo[ServiceInstance.Accuracy]
-          .map(a ⇒ serviceTs.path.name → a.percentage)
-      }.map(_.toMap).map(Result)
+      val f = Future
+        .traverse(context.children) { serviceTs ⇒
+          (serviceTs ? GetAccuracy)
+            .mapTo[ServiceInstance.Accuracy]
+            .map(a ⇒ serviceTs.path.name → a.percentage)
+        }
+        .map(_.toMap)
+        .map(Result)
       f.pipeTo(sender())
     case c @ Changed(DataKey) ⇒
       val data = c.get(DataKey)
@@ -73,4 +77,3 @@ class Service extends Actor with ActorLogging {
     //context.actorOf(ServiceInstance.props, serviceInstanceName)
   }
 }
-

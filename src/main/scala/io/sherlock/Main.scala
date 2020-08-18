@@ -3,23 +3,23 @@ package io.sherlock
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
 
-import akka.actor.{ ActorRef, ActorSystem }
-import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
+import akka.actor.{ActorRef, ActorSystem}
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.server.Route
 import brave.Tracing
-import io.sherlock.core.{ ActorCache, UniqueHostsStage }
+import io.sherlock.core.{ActorCache, UniqueHostsStage}
 import zipkin.reporter.AsyncReporter
 import zipkin.reporter.okhttp3.OkHttpSender
 
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 import akka.http.scaladsl.Http
 import akka.stream.contrib.PassThroughFlow
-import akka.stream.{ ActorMaterializer, KillSwitches, OverflowStrategy }
-import akka.stream.scaladsl.{ BidiFlow, Flow, Keep, Sink, Source }
+import akka.stream.{ActorMaterializer, KillSwitches, OverflowStrategy}
+import akka.stream.scaladsl.{BidiFlow, Flow, Keep, Sink, Source}
 import com.typesafe.config.ConfigFactory
 import io.sherlock.core.ServiceRegistry
 import io.sherlock.http.HttpApi
-import io.sherlock.stages.{ CacheStage, HttpBidiFlow, SqubsExamples }
+import io.sherlock.stages.{CacheStage, HttpBidiFlow, SqubsExamples}
 import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration._
@@ -32,42 +32,47 @@ object Main extends App with OptsSupport {
   val opts = argsToOpts(args.toList)
   applySystemProperties(opts)
 
-  val conf = ConfigFactory.load()
-  implicit val system = ActorSystem("sd", conf)
+  val conf                  = ConfigFactory.load()
+  implicit val system       = ActorSystem("sd", conf)
   implicit val materializer = ActorMaterializer.create(system)
   import system.dispatcher
 
-  val akkaPort = conf.as[Int]("akka.remote.netty.tcp.port")
-  val hostname = conf.as[String]("akka.remote.netty.tcp.hostname")
-  val name = s"${hostname}:${akkaPort}"
+  val akkaPort  = conf.as[Int]("akka.remote.netty.tcp.port")
+  val hostname  = conf.as[String]("akka.remote.netty.tcp.hostname")
+  val name      = s"${hostname}:${akkaPort}"
   val seedNodes = conf.as[List[String]]("akka.cluster.seed-nodes")
-  val httpPort = conf.as[Int]("port")
-  val registry = system.actorOf(ServiceRegistry.props, "service-registry")
+  val httpPort  = conf.as[Int]("port")
+  val registry  = system.actorOf(ServiceRegistry.props, "service-registry")
 
   //ClusterHttpManagement(cluster)
   //CoordinatedShutdown(system)
 
-  val sender = OkHttpSender.create(conf.as[String]("zipkin-url"))
+  val sender                               = OkHttpSender.create(conf.as[String]("zipkin-url"))
   val reporter: AsyncReporter[zipkin.Span] = AsyncReporter.builder(sender).build()
-  val tracing = Tracing.newBuilder().localServiceName(name)
-    .reporter(reporter).build()
+  val tracing = Tracing
+    .newBuilder()
+    .localServiceName(name)
+    .reporter(reporter)
+    .build()
 
   val httpApi = new HttpApi(name, registry, tracing)(system).route
 
-  val routeFlow = Route.handlerFlow(httpApi)
-  val hosts = new AtomicReference(Set[String]())
+  val routeFlow   = Route.handlerFlow(httpApi)
+  val hosts       = new AtomicReference(Set[String]())
   val uniqueHosts = new UniqueHostsStage(hosts)
 
   //curl http://127.0.0.1:9090/ping/haghard
 
   //val httpGraph =
-  BidiFlow.fromGraph(new HttpBidiFlow[HttpRequest, HttpRequest])
+  BidiFlow
+    .fromGraph(new HttpBidiFlow[HttpRequest, HttpRequest])
     .join(Flow.fromFunction[(HttpRequest, String), (HttpRequest, String)](identity))
     //.join(Flow[(HttpRequest, String)].buffer(1 << 2, OverflowStrategy.backpressure)).map(_._1)
     .via(routeFlow)
 
   //val httpGraph =
-  SqubsExamples.bidiHttpFlow(system, maxInFlight = 1)
+  SqubsExamples
+    .bidiHttpFlow(system, maxInFlight = 1)
     .join(Flow.fromFunction[(String, HttpRequest), (String, HttpRequest)](identity))
     //.join(Flow[(String, HttpRequest)].buffer(1 << 2, OverflowStrategy.backpressure))
     .via(routeFlow)
@@ -141,21 +146,27 @@ object Main extends App with OptsSupport {
   }*/
 
   Http()
-    .bindAndHandle(handler = httpGraph /*routeFlow*/ , interface = hostname, port = httpPort
-    /*, connectionContext = ConnectionContext.https(trustfulCtx)*/ )
+    .bindAndHandle(
+      handler = httpGraph /*routeFlow*/,
+      interface = hostname,
+      port = httpPort
+      /*, connectionContext = ConnectionContext.https(trustfulCtx)*/
+    )
     .onComplete {
       case scala.util.Success(_) ⇒
         println(s"seed-nodes: ${seedNodes.mkString(",")}")
         println(s"akka node: ${hostname}:${akkaPort}")
         println(s"https port: ${httpPort}")
-        println(Console.GREEN +
+        println(
+          Console.GREEN +
           """
               ___  ____   ___  __   __  ___   ___     ______
              / __| | __| | _ \ \ \ / / | __| | _ \    \ \ \ \
              \__ \ | _|  |   /  \ V /  | _|  |   /     ) ) ) )
              |___/ |___| |_|_\   \_/   |___| |_|_\    /_/_/_/
              ========================================
-        """ + "\n" + s""":: ($version) ::""" + Console.RESET)
+        """ + "\n" + s""":: ($version) ::""" + Console.RESET
+        )
 
       case scala.util.Failure(_) ⇒
         Await.result(system.terminate, 10.seconds)

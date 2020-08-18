@@ -2,24 +2,25 @@ package io.sherlock.core
 
 import java.util.concurrent.atomic.AtomicReference
 import akka.http.scaladsl.model.headers.Host
-import akka.http.scaladsl.model.{ HttpHeader, HttpRequest }
+import akka.http.scaladsl.model.{HttpHeader, HttpRequest}
 import akka.stream.stage._
-import akka.stream.{ Attributes, FlowShape, Inlet, Outlet }
+import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 
-class UniqueHostsStage(val hosts: AtomicReference[Set[String]]) extends GraphStage[FlowShape[HttpRequest, HttpRequest]] {
-  val in = Inlet[HttpRequest]("in")
+class UniqueHostsStage(val hosts: AtomicReference[Set[String]])
+    extends GraphStage[FlowShape[HttpRequest, HttpRequest]] {
+  val in  = Inlet[HttpRequest]("in")
   val out = Outlet[HttpRequest]("out")
 
   override val shape = FlowShape.of(in, out)
 
   private def findHostHeader(headers: Seq[HttpHeader]): Option[Host] = {
     def loop(it: Iterator[HttpHeader]): Option[Host] =
-      if (it.hasNext) {
+      if (it.hasNext)
         it.next match {
           case h: Host ⇒ Some(h)
           case _       ⇒ loop(it)
         }
-      } else None
+      else None
     loop(headers.iterator)
   }
 
@@ -48,6 +49,7 @@ class UniqueHostsStage(val hosts: AtomicReference[Set[String]]) extends GraphSta
           }
 
           override def onPull() = pull(in)
-        })
+        }
+      )
     }
 }

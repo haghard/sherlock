@@ -1,11 +1,11 @@
 package io.sherlock.core
 
-import akka.actor.{ Actor, ActorLogging, Props }
-import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
-import akka.stream.scaladsl.{ Flow, GraphDSL }
+import akka.actor.{Actor, ActorLogging, Props}
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import akka.stream.scaladsl.{Flow, GraphDSL}
 import akka.stream.stage._
 import akka.stream.FlowShape
-import io.sherlock.core.ActorCache.{ Ans, Check }
+import io.sherlock.core.ActorCache.{Ans, Check}
 
 object ActorCache {
 
@@ -17,19 +17,19 @@ object ActorCache {
 
   def flow(
     checkStage: GraphStage[FlowShape[HttpRequest, HttpRequest]],
-    http:       Flow[HttpRequest, HttpResponse, akka.NotUsed]) = {
+    http: Flow[HttpRequest, HttpResponse, akka.NotUsed]
+  ) =
     Flow.fromGraph(GraphDSL.create() { implicit b ⇒
       import GraphDSL.Implicits._
-      val check = b.add(checkStage)
+      val check  = b.add(checkStage)
       val routes = b.add(http)
       check ~> routes
       FlowShape(check.in, routes.out)
     })
-  }
 }
 
 class ActorCache extends Actor with ActorLogging {
-  var count: Long = 0l
+  var count: Long = 0L
 
   override def receive: Receive = {
     case r: Check ⇒

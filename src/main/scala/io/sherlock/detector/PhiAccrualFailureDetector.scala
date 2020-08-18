@@ -9,10 +9,14 @@ object PhiAccrualFailureDetector {
 }
 
 case class PhiAccrualFailureDetector(timestamps: IndexedSeq[Long])(implicit clock: PhiAccrualFailureDetector.Clock) {
-  val intervals = timestamps.foldLeft((Vector.empty[Long], timestamps.head)) {
-    case ((deltas, last), next) ⇒
-      (deltas :+ (next - last), next)
-  }._1.sorted.tail
+  val intervals = timestamps
+    .foldLeft((Vector.empty[Long], timestamps.head)) {
+      case ((deltas, last), next) ⇒
+        (deltas :+ (next - last), next)
+    }
+    ._1
+    .sorted
+    .tail
 
   val intervalSum: Long = intervals.sum
 
@@ -26,30 +30,30 @@ case class PhiAccrualFailureDetector(timestamps: IndexedSeq[Long])(implicit cloc
 
   private def pow2(x: Long) = x * x
 
-  val minStdDeviation = 100.millis
-  val acceptableHeartbeatPause = 200.millis
-  private val minStdDeviationMillis = minStdDeviation.toMillis
+  val minStdDeviation                        = 100.millis
+  val acceptableHeartbeatPause               = 200.millis
+  private val minStdDeviationMillis          = minStdDeviation.toMillis
   private val acceptableHeartbeatPauseMillis = acceptableHeartbeatPause.toMillis
 
   private def ensureValidStdDeviation(stdDeviation: Double): Double = math.max(stdDeviation, minStdDeviationMillis)
 
   /**
-   * The suspicion level of the accrual failure detector.
-   *
-   * If a connection does not have any records in failure detector then it is
-   * considered healthy.
-   */
+    * The suspicion level of the accrual failure detector.
+    *
+    * If a connection does not have any records in failure detector then it is
+    * considered healthy.
+    */
   def phi: Double = phi(clock())
 
   /**
-   * Calculation of phi, derived from the Cumulative distribution function for
-   * N(mean, stdDeviation) normal distribution, given by
-   * 1.0 / (1.0 + math.exp(-y * (1.5976 + 0.070566 * y * y)))
-   * where y = (x - mean) / standard_deviation
-   * This is an approximation defined in β Mathematics Handbook (Logistic approximation).
-   * Error is 0.00014 at +- 3.16
-   * The calculated value is equivalent to -log10(1 - CDF(y))
-   */
+    * Calculation of phi, derived from the Cumulative distribution function for
+    * N(mean, stdDeviation) normal distribution, given by
+    * 1.0 / (1.0 + math.exp(-y * (1.5976 + 0.070566 * y * y)))
+    * where y = (x - mean) / standard_deviation
+    * This is an approximation defined in β Mathematics Handbook (Logistic approximation).
+    * Error is 0.00014 at +- 3.16
+    * The calculated value is equivalent to -log10(1 - CDF(y))
+    */
   def phi(timeDiff: Long, mean: Double, stdDeviation: Double): Double = {
     val y = (timeDiff - mean) / stdDeviation
     val e = math.exp(-y * (1.5976 + 0.070566 * y * y))

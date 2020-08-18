@@ -2,9 +2,9 @@ package io.sherlock.stages
 
 import akka.actor.ActorRef
 import akka.stream.stage.GraphStageLogic.StageActor
-import akka.stream.{ Attributes, Outlet, SourceShape }
-import akka.stream.stage.{ GraphStage, GraphStageLogic, OutHandler, StageLogging }
-import io.sherlock.stages.ActorBasedSource.{ AssignStageActor, SessionOverflowStrategy }
+import akka.stream.{Attributes, Outlet, SourceShape}
+import akka.stream.stage.{GraphStage, GraphStageLogic, OutHandler, StageLogging}
+import io.sherlock.stages.ActorBasedSource.{AssignStageActor, SessionOverflowStrategy}
 
 import scala.collection._
 import scala.reflect.ClassTag
@@ -25,28 +25,31 @@ object ActorBasedSource {
   final case class Overflow(msg: String) extends RuntimeException(msg)
 }
 
-final class ActorBasedSource[T: ClassTag](source: ActorRef, bufferSize: Int, os: SessionOverflowStrategy) extends GraphStage[SourceShape[T]] {
-  val out: Outlet[T] = Outlet("actor-source")
+final class ActorBasedSource[T: ClassTag](source: ActorRef, bufferSize: Int, os: SessionOverflowStrategy)
+    extends GraphStage[SourceShape[T]] {
+  val out: Outlet[T]                 = Outlet("actor-source")
   override val shape: SourceShape[T] = SourceShape(out)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
     new GraphStageLogic(shape) with StageLogging {
-      lazy val self: StageActor = getStageActor(onReceive)
+      lazy val self: StageActor     = getStageActor(onReceive)
       var queue: immutable.Queue[T] = immutable.Queue.empty[T]
 
-      override def preStart(): Unit = {
+      override def preStart(): Unit =
         source ! AssignStageActor(self.ref)
-      }
 
-      setHandler(out, new OutHandler {
-        override def onPull(): Unit = {
-          log.info("onPull() called...")
-          tryToPush()
+      setHandler(
+        out,
+        new OutHandler {
+          override def onPull(): Unit = {
+            log.info("onPull() called...")
+            tryToPush()
+          }
         }
-      })
+      )
 
-      private def tryToPush(): Unit = {
-        if (isAvailable(out) && queue.nonEmpty) {
+      private def tryToPush(): Unit =
+        if (isAvailable(out) && queue.nonEmpty)
           //log.info("ready to dequeue")
           queue.dequeue match {
             case (msg: T, rest: immutable.Queue[T]) ⇒
@@ -54,10 +57,8 @@ final class ActorBasedSource[T: ClassTag](source: ActorRef, bufferSize: Int, os:
               push(out, msg)
               queue = rest
           }
-        }
-      }
 
-      private def onReceive(x: (ActorRef, Any))(implicit tag: ClassTag[T]): Unit = {
+      private def onReceive(x: (ActorRef, Any))(implicit tag: ClassTag[T]): Unit =
         x match {
           case (sender, tag(msg)) ⇒
             log.info("incoming msg from {}, queueing: {} ", sender, msg)
@@ -77,6 +78,5 @@ final class ActorBasedSource[T: ClassTag](source: ActorRef, bufferSize: Int, os:
           case (sender, unexpectedMessage) ⇒
             log.error("Unsupported type from {}, dropping:  {} ", sender, unexpectedMessage.getClass.getName)
         }
-      }
     }
 }

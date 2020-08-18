@@ -12,7 +12,8 @@ object Btrees {
 
   implicit class TreeSyntax[T](val self: ImmutableBTree[T])(implicit ord: scala.math.Ordering[T]) /*extends AnyVal*/ {
 
-    @scala.annotation.tailrec private def search(searched: T, t: ImmutableBTree[T], n: Long = 0): (Option[T], Long) =
+    @scala.annotation.tailrec
+    private def search(searched: T, t: ImmutableBTree[T], n: Long = 0): (Option[T], Long) =
       t match {
         case BLeaf                           ⇒ (None, n)
         case BNode(v, _, _) if searched == v ⇒ (Option(v), n)
@@ -93,13 +94,14 @@ object Btrees {
       }
     }
 
-    private def loop(v: T, t: ImmutableBTree[T]): T = t match {
-      case BLeaf ⇒ v
-      case BNode(v, left, right) ⇒
-        val l = loop(v, left)
-        val r = loop(v, right)
-        if (ord lt (l, r)) r else l
-    }
+    private def loop(v: T, t: ImmutableBTree[T]): T =
+      t match {
+        case BLeaf ⇒ v
+        case BNode(v, left, right) ⇒
+          val l = loop(v, left)
+          val r = loop(v, right)
+          if (ord lt (l, r)) r else l
+      }
 
     def max: T =
       loop(null.asInstanceOf[T], self)
@@ -107,29 +109,30 @@ object Btrees {
     def find(elem: T): (Option[T], Long) =
       search(elem, self)
 
-    def :+(v: T): ImmutableBTree[T] = (v, self) match {
-      case (cValue, BLeaf) ⇒
-        BNode(cValue, BLeaf, BLeaf)
-      case (cValue, BNode(a, left, right)) ⇒
-        if (ord.lt(cValue, a))
-          BNode(a, left :+ cValue, right)
-        else if (ord.gt(cValue, a))
-          BNode(a, left, right :+ cValue)
-        else // ==
-          BNode(cValue, left, right)
-    }
+    def :+(v: T): ImmutableBTree[T] =
+      (v, self) match {
+        case (cValue, BLeaf) ⇒
+          BNode(cValue, BLeaf, BLeaf)
+        case (cValue, BNode(a, left, right)) ⇒
+          if (ord.lt(cValue, a))
+            BNode(a, left :+ cValue, right)
+          else if (ord.gt(cValue, a))
+            BNode(a, left, right :+ cValue)
+          else // ==
+            BNode(cValue, left, right)
+      }
   }
 
-  val size = 500
-  val root: ImmutableBTree[Int] = BNode(size / 2, BLeaf, BLeaf)
-  val entries = scala.util.Random.shuffle((1 to size).toList)
+  val size                        = 500
+  val root: ImmutableBTree[Int]   = BNode(size / 2, BLeaf, BLeaf)
+  val entries                     = scala.util.Random.shuffle((1 to size).toList)
   val myTree: ImmutableBTree[Int] = entries.foldLeft(root)((acc, i) ⇒ acc :+ i)
-  entries.foldLeft(0) { (acc, i) ⇒ math.max(acc, myTree.find(i)._2.toInt) }
+  entries.foldLeft(0)((acc, i) ⇒ math.max(acc, myTree.find(i)._2.toInt))
 
   myTree.foreach(println(_))
 
   val r: ImmutableBTree[Int] = BNode(13, BLeaf, BLeaf)
-  val t = r :+ 8 :+ 17 :+ 4 :+ 6 :+ 5 :+ 7
+  val t                      = r :+ 8 :+ 17 :+ 4 :+ 6 :+ 5 :+ 7
   t.foreach(print(_))
   t.preOrder(print(_))
   //t.inOrder(println(_))
@@ -147,5 +150,5 @@ object Btrees {
           BNode(5, BLeaf, BLeaf),
           BNode(7, BLeaf, BLeaf))), BLeaf),
     BNode(17, BLeaf, BLeaf))
-  */
+   */
 }
