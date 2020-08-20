@@ -213,12 +213,13 @@ object SqubsExamples {
 
   val ocHeader = "Unavailable"
 
+  //Rate-limiting the number of requests that are being made.
+  //Consider scala.collection.concurrent.TrieMap instead of AtomicReference[Map[_, _]]
   def bidiHttpFlow(
     sys: ActorSystem,
     maxInFlight: Int = 1 << 5,
     parallelism: Int = 4
   ): BidiFlow[HttpRequest, (String, HttpRequest), (String, HttpRequest), HttpRequest, akka.NotUsed] = {
-
     def captureReq(
       ref: AtomicReference[Map[String, HttpRequest]]
     )(updater: Map[String, HttpRequest] ⇒ Map[String, HttpRequest]): Unit = {
@@ -231,6 +232,7 @@ object SqubsExamples {
     BidiFlow.fromGraph(
       GraphDSL.create() { implicit b ⇒
         // A registry of all in-flight request
+        //scala.collection.concurrent.TrieMap[String, HttpRequest]
         val reqInFlight = new AtomicReference(Map[String, HttpRequest]())
 
         val inbound: FlowShape[HttpRequest, (String, HttpRequest)] =
