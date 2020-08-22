@@ -36,7 +36,7 @@ object Btrees {
             //println(s" stack: ${stack.mkString(",")}")
             go(l, stack, f, n + 1)
           case _ ⇒
-            if (stack.size > 0) go(stack.head, stack.tail, f, n)
+            if (stack.nonEmpty) go(stack.head, stack.tail, f, n)
             else println(n)
         }
 
@@ -57,7 +57,7 @@ object Btrees {
             //println(s" rest: ${rest.mkString(",")}")
             go(l, rest, f, n + 1)
           case _ ⇒
-            if (rest.size > 0) go(rest.head, rest.tail, f, n)
+            if (rest.nonEmpty) go(rest.head, rest.tail, f, n)
             else () //println(n)
         }
 

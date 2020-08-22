@@ -9,9 +9,9 @@ import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.server.{RequestContext, Route}
 import akka.stream.javadsl.SourceWithContext
-import akka.stream.scaladsl.{BidiFlow, Broadcast, Flow, GraphDSL, Keep, Sink, SinkQueueWithCancel, Source, Unzip, Zip}
+import akka.stream.scaladsl.{BidiFlow, Broadcast, Flow, FlowWithContext, GraphDSL, Keep, MergeHub, Sink, SinkQueueWithCancel, Source, Unzip, Zip}
 import akka.stream.stage.{AsyncCallback, GraphStage, GraphStageLogic, InHandler, OutHandler, StageLogging}
-import akka.stream.{Attributes, BidiShape, ClosedShape, FlowShape, Graph, Inlet, Outlet, OverflowStrategy, SourceShape}
+import akka.stream.{ActorAttributes, ActorMaterializer, ActorMaterializerSettings, Attributes, BidiShape, ClosedShape, FlowShape, Graph, Inlet, KillSwitches, Materializer, Outlet, OverflowStrategy, SourceShape}
 import akka.util.ByteString
 import com.typesafe.config.ConfigFactory
 import org.squbs.streams.Retry
@@ -19,7 +19,7 @@ import org.squbs.streams.circuitbreaker.CircuitBreaker
 import org.squbs.streams.circuitbreaker.impl.AtomicCircuitBreakerState
 
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
@@ -184,6 +184,92 @@ object SqubsExamples {
       .via(routeFlow)
   }*/
 
+  val buffersSize = 1 << 5
+
+  def domain(implicit
+    sys: ActorSystem
+  ): FlowWithContext[HttpRequest, Promise[HttpResponse], HttpResponse, Promise[HttpResponse], Any] =
+    FlowWithContext[HttpRequest, Promise[HttpResponse]]
+      .withAttributes(Attributes.inputBuffer(1, 1))
+      .mapAsync(4) { req: HttpRequest ⇒
+        Future {
+          //check headers if authorized
+          null.asInstanceOf[HttpResponse]
+        }(sys.dispatcher)
+      }
+
+  case class State(cnt: Long = 0L)
+
+  def applyReq(req: HttpRequest, state: State): State = ???
+
+  def auth(initState: State)(implicit
+    sys: ActorSystem
+  ): FlowWithContext[HttpRequest, Promise[HttpResponse], HttpRequest, Promise[HttpResponse], Any] = {
+    val f = Flow.fromMaterializer { (mat, attr) ⇒
+      //attr.attributeList.mkString(",")
+      //val disp = attr.get[ActorAttributes.Dispatcher].get
+      //val buf = attr.get[akka.stream.Attributes.InputBuffer].get
+
+      FlowWithContext[HttpRequest, Promise[HttpResponse]]
+        .withAttributes(Attributes.inputBuffer(1, 1))
+        .mapAsync[HttpRequest](4) { req: HttpRequest ⇒
+          Future {
+            // if authorized set headers
+            //req.withHeaders()
+            req
+          }(mat.executionContext)
+        }
+        .asFlow
+        .scan((initState, Promise[HttpResponse](), null.asInstanceOf[HttpRequest])) {
+          case (triple, elem) ⇒
+            val req          = elem._1
+            val p            = elem._2
+            val state        = triple._1
+            val updatedState = applyReq(req, state)
+            (updatedState, p, req)
+        }
+        .map { case (_: State, p: Promise[HttpResponse], req: HttpRequest) ⇒ (req, p) }
+    }
+
+    FlowWithContext.fromTuples(f)
+  }
+
+  /*
+    val flow = FlowWithContext[HttpRequest, Promise[HttpResponse]]
+      .withAttributes(Attributes.inputBuffer(buffersSize, buffersSize))
+      .asFlow
+      .scan()
+      .mapAsync[(HttpResponse, Promise[HttpResponse])](4) {
+        case (req: HttpRequest, p: Promise[HttpResponse]) ⇒
+          Future((null.asInstanceOf[HttpResponse], p))(???)
+      }
+    FlowWithContext.fromTuples[HttpRequest, Promise[HttpResponse], HttpResponse, Promise[HttpResponse], Any](flow)
+   */
+
+  val (sourceQueue, switch, done) =
+    Source
+      .queue[(HttpRequest, Promise[HttpResponse])](buffersSize, OverflowStrategy.dropNew)
+      .viaMat(KillSwitches.single)(Keep.both)
+      .via(auth(State())(???))
+      .via(domain(???))
+      .toMat(Sink.foreach { case (response, promise) ⇒ promise.trySuccess(response) }) {
+        case ((sink, switch), done) ⇒ (sink, switch, done)
+      }
+      .run()(???)
+
+  sourceQueue.offer(???)
+
+  /*val (sink, switch, done) =
+    MergeHub
+      .source[(HttpRequest, Promise[HttpResponse])](buffersSize)
+      .viaMat(KillSwitches.single)(Keep.both)
+      .via(authFlow(???))
+      .toMat(Sink.foreach { case (response, promise) ⇒ promise.trySuccess(response) }) {
+        case ((sink, switch), done) ⇒ (sink, switch, done)
+      }
+      .run()(???)
+   */
+
   //Simular to https://github.com/hseeberger/accessus/blob/9d36dd703664565f4f1fe7b602bf4a48b0a87e8c/src/main/scala/rocks/heikoseeberger/accessus/Accessus.scala#L138
   def httpFlow(sys: ActorSystem, parallelism: Int = 4) =
     Flow.fromGraph(
@@ -220,9 +306,10 @@ object SqubsExamples {
     maxInFlight: Int = 1 << 5,
     parallelism: Int = 4
   ): BidiFlow[HttpRequest, (String, HttpRequest), (String, HttpRequest), HttpRequest, akka.NotUsed] = {
-    def captureReq(
-      ref: AtomicReference[Map[String, HttpRequest]]
-    )(updater: Map[String, HttpRequest] ⇒ Map[String, HttpRequest]): Unit = {
+
+    def captureReq(ref: AtomicReference[Map[String, HttpRequest]])(
+      updater: Map[String, HttpRequest] ⇒ Map[String, HttpRequest]
+    ): Unit = {
       val map     = ref.get
       val updated = updater(map)
       if (ref.compareAndSet(map, updated)) () else captureReq(ref)(updater)
@@ -232,7 +319,7 @@ object SqubsExamples {
     BidiFlow.fromGraph(
       GraphDSL.create() { implicit b ⇒
         // A registry of all in-flight request
-        //scala.collection.concurrent.TrieMap[String, HttpRequest]
+        //scala.collection.concurrent.TrieMap[String, HttpRequest]()
         val reqInFlight = new AtomicReference(Map[String, HttpRequest]())
 
         val inbound: FlowShape[HttpRequest, (String, HttpRequest)] =
