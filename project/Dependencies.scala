@@ -64,17 +64,19 @@ object Dependencies {
     val jsoniter = "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.0.1"
 
     // li haoyi ammonite repl embed
-    val ammonite = ("com.lihaoyi" % "ammonite" % "1.9.2" % "test").cross(CrossVersion.full)
+    val ammonite = ("com.lihaoyi" % "ammonite" % "2.2.0" % "test").cross(CrossVersion.full)
 
     //https://squbs.readthedocs.io/en/latest/circuitbreaker/
     val squbsP = ("org.squbs" %% "squbs-pattern" % squbsVersion).excludeAll("com.typesafe.akka")
     val squbsExt = ("org.squbs" %% "squbs-ext" % squbsVersion).excludeAll("com.typesafe.akka")
     val chronicle = "net.openhft" % "chronicle-queue" % "4.5.13"
 
+    val oneNio = "ru.odnoklassniki" % "one-nio" % "1.2.0"
+
     val all = Seq(akkaActor, akkaHttp, akkaHttp, akkaSprayJson, akkaDistData, slf4j, logback, snaptree,
       fingertree, radixtree, isarn, ammonite, catsColl, btree, /*swakka,*/
       ficus, akkaStreams, algebird, jvmUtil) ++ Seq(opentracing, zipkinSender, brave /*, akkaClusterManagement*/ , playJson, jsoniter,
-      squbsP, squbsExt, akkaStreamContrib)
+      squbsP, squbsExt, akkaStreamContrib, oneNio)
 
   }
 

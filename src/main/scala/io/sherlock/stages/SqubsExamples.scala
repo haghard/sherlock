@@ -8,10 +8,11 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.server.{RequestContext, Route}
+import akka.http.scaladsl.util.FastFuture
 import akka.stream.javadsl.SourceWithContext
 import akka.stream.scaladsl.{BidiFlow, Broadcast, Flow, FlowWithContext, GraphDSL, Keep, MergeHub, Sink, SinkQueueWithCancel, Source, Unzip, Zip}
 import akka.stream.stage.{AsyncCallback, GraphStage, GraphStageLogic, InHandler, OutHandler, StageLogging}
-import akka.stream.{ActorAttributes, ActorMaterializer, ActorMaterializerSettings, Attributes, BidiShape, ClosedShape, FlowShape, Graph, Inlet, KillSwitches, Materializer, Outlet, OverflowStrategy, SourceShape}
+import akka.stream.{ActorAttributes, ActorMaterializer, ActorMaterializerSettings, Attributes, BidiShape, ClosedShape, FlowShape, Graph, Inlet, KillSwitches, Materializer, Outlet, OverflowStrategy, SourceShape, SystemMaterializer}
 import akka.util.ByteString
 import com.typesafe.config.ConfigFactory
 import org.squbs.streams.Retry
@@ -200,7 +201,7 @@ object SqubsExamples {
 
   case class State(cnt: Long = 0L)
 
-  def applyReq(req: HttpRequest, state: State): State = ???
+  def authReq(req: HttpRequest, state: State): (HttpRequest, State) = ???
 
   def auth(initState: State)(implicit
     sys: ActorSystem
@@ -214,19 +215,19 @@ object SqubsExamples {
         .withAttributes(Attributes.inputBuffer(1, 1))
         .mapAsync[HttpRequest](4) { req: HttpRequest ⇒
           Future {
-            // if authorized set headers
-            //req.withHeaders()
+            //set if authorized
+            //req.withHeaders(req.headers :+ RawHeader("authorized", "true")
             req
           }(mat.executionContext)
         }
         .asFlow
         .scan((initState, Promise[HttpResponse](), null.asInstanceOf[HttpRequest])) {
           case (triple, elem) ⇒
-            val req          = elem._1
-            val p            = elem._2
-            val state        = triple._1
-            val updatedState = applyReq(req, state)
-            (updatedState, p, req)
+            val req            = elem._1
+            val p              = elem._2
+            val state          = triple._1
+            val (req0, state0) = authReq(req, state)
+            (state0, p, req0)
         }
         .map { case (_: State, p: Promise[HttpResponse], req: HttpRequest) ⇒ (req, p) }
     }
@@ -299,13 +300,42 @@ object SqubsExamples {
 
   val ocHeader = "Unavailable"
 
-  //Rate-limiting the number of requests that are being made.
-  //Consider scala.collection.concurrent.TrieMap instead of AtomicReference[Map[_, _]]
+  /**
+    * https://en.wikipedia.org/wiki/Little%27s_law
+    *
+    * L = λ * W
+    * L – the average number of items in a queuing system (queue size)
+    * λ – the average number of items arriving at the system per unit of time
+    * W – the average waiting time an item spends in a queuing system
+    *
+    * Question: How many processes running in parallel we need given
+    * throughput = 100 rps and average latency = 100 millis  ?
+    *
+    * 100 * 0.1 = 10
+    *
+    * Give the numbers above, the Little’s Law shows that on average, having
+    * queue size == 100,
+    * parallelism factor == 10
+    * average latency of single request == 100 millis
+    * we can keep up with throughput = 100 rps
+    *
+    * Rate-limiting the number of requests that are being made if
+    */
   def bidiHttpFlow(
     sys: ActorSystem,
-    maxInFlight: Int = 1 << 5,
-    parallelism: Int = 4
+    maxInFlight: Int = 10,
+    parallelism: Int = 10
+  )(implicit
+    m: Materializer
   ): BidiFlow[HttpRequest, (String, HttpRequest), (String, HttpRequest), HttpRequest, akka.NotUsed] = {
+    val to = 1.second
+    //off-heap lock-free hash tables with 64-bit keys.
+    val map = new one.nio.mem.LongObjectHashMap[Array[Byte]](maxInFlight) //maxInFlight kv only possible
+
+    val blobs = new one.nio.mem.OffheapBlobMap(1 << 11)
+
+    //an abstraction for building general purpose off-heap hash tables.
+    //val map = new one.nio.mem.OffheapBlobMap(10)
 
     def captureReq(ref: AtomicReference[Map[String, HttpRequest]])(
       updater: Map[String, HttpRequest] ⇒ Map[String, HttpRequest]
@@ -326,20 +356,34 @@ object SqubsExamples {
           b.add(
             Flow[HttpRequest].mapAsync(parallelism) { req ⇒
               val reqId = UUID.randomUUID.toString
-              //if (reqInFlight.get.size < maxInFlight) {
-              Future {
-                //import akka.pattern.ask
-                //tenantsRegion.ask
-                captureReq(reqInFlight)(_ + (reqId → req))
-                sys.log.info(s"flies in -> {}", reqId)
-                //
-                Thread.sleep(4000)
-                (reqId, req)
-              }(sys.dispatcher)
-            /*} else {
-              sys.log.info("reject -> {}", reqId)
-              Future.successful((reqId, req.withHeaders(req.headers :+ RawHeader(ocHeader, "true"))))
-            }*/
+
+              //req.entity.dataBytes
+              if (reqInFlight.get.size < maxInFlight)
+                req.entity
+                  .toStrict(to)
+                  .map { bytes ⇒
+                    val r = blobs.put(reqId.getBytes, bytes.data.toArray) //.toByteBuffer.array
+
+                    (reqId, req)
+                  }(sys.dispatcher)
+              /*Future {
+                  //import akka.pattern.ask
+                  //tenantsRegion.ask
+                  captureReq(reqInFlight)(_ + (reqId → req))
+
+                  req.entity.toStrict(1.second)
+
+                  map.put(reqId.getBytes, )
+
+                  sys.log.info(s"flies in -> {}", reqId)
+                  //
+                  Thread.sleep(4000)
+                  (reqId, req)
+                }(sys.dispatcher)*/
+              else {
+                sys.log.info("reject -> {}", reqId)
+                Future.successful((reqId, req.withHeaders(req.headers :+ RawHeader(ocHeader, "true"))))
+              }
             }
           )
 

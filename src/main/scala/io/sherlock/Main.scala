@@ -14,7 +14,7 @@ import zipkin.reporter.okhttp3.OkHttpSender
 import scala.concurrent.{Await, Future}
 import akka.http.scaladsl.Http
 import akka.stream.contrib.PassThroughFlow
-import akka.stream.{ActorMaterializer, KillSwitches, OverflowStrategy}
+import akka.stream.{ActorMaterializer, KillSwitches, OverflowStrategy, SystemMaterializer}
 import akka.stream.scaladsl.{BidiFlow, Flow, Keep, Sink, Source}
 import com.typesafe.config.ConfigFactory
 import io.sherlock.core.ServiceRegistry
@@ -34,7 +34,7 @@ object Main extends App with OptsSupport {
 
   val conf                  = ConfigFactory.load()
   implicit val system       = ActorSystem("sd", conf)
-  implicit val materializer = ActorMaterializer.create(system)
+  implicit val materializer = SystemMaterializer(system).materializer
   import system.dispatcher
 
   val akkaPort  = conf.as[Int]("akka.remote.netty.tcp.port")
@@ -81,6 +81,7 @@ object Main extends App with OptsSupport {
     Flow[HttpRequest].mapAsync(1) { r ⇒
       Future {
         system.log.info("preRequest")
+        //req auth headers
         r
       }(materializer.executionContext)
     }
@@ -93,7 +94,9 @@ object Main extends App with OptsSupport {
     }
 
   val httpGraph: Flow[HttpRequest, HttpResponse, akka.NotUsed] =
-    preRequest.via(akka.stream.contrib.PassThroughFlow(routeFlow)).via(postRequest)
+    preRequest
+      .via(akka.stream.contrib.PassThroughFlow(routeFlow))
+      .via(postRequest)
 
   //akka.stream.contrib.PassThroughFlow(routeFlow)
 
