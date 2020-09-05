@@ -59,7 +59,7 @@ object Main extends App with OptsSupport {
 
   val httpApi = new HttpApi(name, registry, tracing)(system).route
 
-  val routeFlow   = Route.handlerFlow(httpApi)
+  val routeFlow   = Route.toFlow(httpApi)
   val hosts       = new AtomicReference(Set[String]())
   val uniqueHosts = new UniqueHostsStage(hosts)
 
