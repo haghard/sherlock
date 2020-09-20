@@ -12,8 +12,8 @@ import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import akka.stream.scaladsl.{BroadcastHub, Keep, RunnableGraph, Source}
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings, OverflowStrategy}
+import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, RunnableGraph, Source}
+import akka.stream.{ActorAttributes, ActorMaterializer, ActorMaterializerSettings, Attributes, OverflowStrategy, Supervision, SystemMaterializer}
 import akka.util.Timeout
 import brave.Tracing
 import io.sherlock.core.{HeartBeat, HeartBeatTrace, Service, ServiceRegistry}
@@ -92,9 +92,25 @@ class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(implici
     system.scheduler.schedule(1.second, 300.millis)(pubSub ! 1)(system.dispatcher)
 
     //one-to-many
-    implicit val m = ActorMaterializer(ActorMaterializerSettings(system).withInputBuffer(1, 1))
+    //implicit val m = ActorMaterializer(ActorMaterializerSettings(system).withInputBuffer(1, 1))
+    implicit val m = SystemMaterializer(system).materializer
+
+    val attr = Attributes.inputBuffer(1, 1)
+    val attr1 = ActorAttributes.maxFixedBufferSize(1)
+    //ActorAttributes.supervisionStrategy(???)
+    //ActorAttributes.dispatcher("")
+
+    val decider: Supervision.Decider = {
+      case _: NumberFormatException => Supervision.Resume
+      case _ => Supervision.Stop
+    }
+
+    //customize supervision stage per stage
+    Flow[Int].map(_ * 2)
+      .withAttributes(ActorAttributes.supervisionStrategy(decider))
+
     val source = Source
-      .fromGraph(new ActorBasedSource[Protocol](pubSub, 1 << 5, FailStage))
+      .fromGraph(new ActorBasedSource[Protocol](pubSub, 1 << 5, FailStage)).withAttributes(attr1)
       .scan(0)((a, _) ⇒ a + 1)
       .map(timeToServerSentEvent(LocalTime.now, _))
       .keepAlive(4.seconds / 2, () ⇒ ServerSentEvent.heartbeat)
@@ -115,9 +131,12 @@ class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(implici
 
   //The main disadvantage here being that you cannot catch an type cast error
   lazy val liveSseStream2 = {
-    implicit val m = ActorMaterializer(ActorMaterializerSettings(system).withInputBuffer(1, 1))
-    system.scheduler.schedule(1.second, 500.millis)(pubSub ! 1)(system.dispatcher)
+    implicit val m = SystemMaterializer(system).materializer
     implicit val d = system.dispatcher
+
+    //ActorMaterializer(ActorMaterializerSettings(system).withInputBuffer(1, 1))
+    system.scheduler.scheduleWithFixedDelay(1.second, 500.millis)(() => pubSub ! 1)(system.dispatcher)
+
     val s = Source
       .actorRef[Int](1 << 8, OverflowStrategy.dropHead)
       .scan(0)((a, _) ⇒ a + 1)
@@ -144,9 +163,7 @@ class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(implici
   def liveSse2(): Route =
     path("live2") {
       get {
-        complete {
-          liveSseStream2
-        }
+        complete(liveSseStream2)
       }
     }
 

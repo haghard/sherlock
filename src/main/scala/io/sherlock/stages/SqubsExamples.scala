@@ -256,6 +256,7 @@ object SqubsExamples {
       .toMat(Sink.foreach { case (response, promise) ⇒ promise.trySuccess(response) }) {
         case ((sink, switch), done) ⇒ (sink, switch, done)
       }
+      .addAttributes(ActorAttributes.supervisionStrategy(akka.stream.Supervision.resumingDecider))
       .run()(???)
 
   sourceQueue.offer(???)
@@ -319,7 +320,7 @@ object SqubsExamples {
     * average latency of single request == 100 millis
     * we can keep up with throughput = 100 rps
     *
-    * Rate-limiting the number of requests that are being made if
+    * Rate-limiting the number of requests that are being made
     */
   def bidiHttpFlow(
     sys: ActorSystem,
@@ -330,9 +331,9 @@ object SqubsExamples {
   ): BidiFlow[HttpRequest, (String, HttpRequest), (String, HttpRequest), HttpRequest, akka.NotUsed] = {
     val to = 1.second
     //off-heap lock-free hash tables with 64-bit keys.
-    val map = new one.nio.mem.LongObjectHashMap[Array[Byte]](maxInFlight) //maxInFlight kv only possible
+    //val map = new one.nio.mem.LongObjectHashMap[Array[Byte]](maxInFlight) //maxInFlight kv only possible
 
-    val blobs = new one.nio.mem.OffheapBlobMap(1 << 11)
+    //val blobs = new one.nio.mem.OffheapBlobMap(1 << 11)
 
     //an abstraction for building general purpose off-heap hash tables.
     //val map = new one.nio.mem.OffheapBlobMap(10)
@@ -345,27 +346,77 @@ object SqubsExamples {
       if (ref.compareAndSet(map, updated)) () else captureReq(ref)(updater)
     }
 
+    final case class RLState(deadlines: Vector[Deadline], seqNumber: Int)
+
+    final case class RateLimiter(numOfReqs: Int, period: FiniteDuration) {
+      val onePeriodAgo = Deadline.now - period
+      val ref          = new AtomicReference[RLState](RLState(Vector.fill(numOfReqs)(onePeriodAgo), 0))
+
+      @scala.annotation.tailrec
+      final def eventually(f: (Deadline, RLState) ⇒ RLState): Unit = {
+        val local = ref.get
+        if (ref.compareAndSet(local, f(Deadline.now, local))) ()
+        else eventually(f)
+      }
+
+      def hasCapacity(): Boolean = {
+        val deadline = Deadline.now
+        val local    = ref.get
+        if (deadline - local.deadlines(local.seqNumber) < period) false
+        else {
+          eventually { (deadline, state) ⇒
+            if (state.seqNumber + 1 == numOfReqs)
+              state.copy(state.deadlines.updated(state.seqNumber, deadline), 0)
+            else
+              state.copy(state.deadlines.updated(state.seqNumber, deadline), state.seqNumber + 1)
+          }
+          true
+        }
+      }
+    }
+
     //https://doc.akka.io/docs/akka/current/stream/stream-graphs.html#bidirectional-flows
     BidiFlow.fromGraph(
       GraphDSL.create() { implicit b ⇒
         // A registry of all in-flight request
         //scala.collection.concurrent.TrieMap[String, HttpRequest]()
         val reqInFlight = new AtomicReference(Map[String, HttpRequest]())
+        val rateLimiter = RateLimiter(10, 1.second)
 
         val inbound: FlowShape[HttpRequest, (String, HttpRequest)] =
           b.add(
             Flow[HttpRequest].mapAsync(parallelism) { req ⇒
               val reqId = UUID.randomUUID.toString
+              //if (reqInFlight.get.size < maxInFlight) {
+
+                Future {
+
+                  //if(rateLimiter.hasCapacity())
+
+                  //import akka.pattern.ask
+                  //tenantsRegion.ask
+                  captureReq(reqInFlight)(_ + (reqId → req))
+                  sys.log.info(s"flies in -> {}", reqId)
+                  //
+                  Thread.sleep(4000)
+                  (reqId, req)
+                }(sys.dispatcher)
+              /*} else {
+                sys.log.info("reject -> {}", reqId)
+                Future.successful((reqId, req.withHeaders(req.headers :+ RawHeader(ocHeader, "true"))))
+              }*/
+
+
 
               //req.entity.dataBytes
-              if (reqInFlight.get.size < maxInFlight)
-                req.entity
-                  .toStrict(to)
+              /*if (reqInFlight.get.size < maxInFlight)
+                req.entity.toStrict(to)
                   .map { bytes ⇒
                     val r = blobs.put(reqId.getBytes, bytes.data.toArray) //.toByteBuffer.array
 
                     (reqId, req)
-                  }(sys.dispatcher)
+                  }(sys.dispatcher)*/
+
               /*Future {
                   //import akka.pattern.ask
                   //tenantsRegion.ask
@@ -380,10 +431,6 @@ object SqubsExamples {
                   Thread.sleep(4000)
                   (reqId, req)
                 }(sys.dispatcher)*/
-              else {
-                sys.log.info("reject -> {}", reqId)
-                Future.successful((reqId, req.withHeaders(req.headers :+ RawHeader(ocHeader, "true"))))
-              }
             }
           )
 

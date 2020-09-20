@@ -8,7 +8,7 @@ object Btrees {
 
   case object BLeaf extends ImmutableBTree[Nothing]
 
-  case class BNode[T](value: T, left: ImmutableBTree[T], right: ImmutableBTree[T]) extends ImmutableBTree[T]
+  final case class BNode[T](value: T, left: ImmutableBTree[T], right: ImmutableBTree[T]) extends ImmutableBTree[T]
 
   implicit class TreeSyntax[T](val self: ImmutableBTree[T])(implicit ord: scala.math.Ordering[T]) /*extends AnyVal*/ {
 
@@ -24,7 +24,7 @@ object Btrees {
 
     def foreach[B](f: T ⇒ B): Unit = {
       @annotation.tailrec
-      def go(tree: ImmutableBTree[T], stack: List[ImmutableBTree[T]], f: T ⇒ B, n: Long = 0): Unit =
+      def go(tree: ImmutableBTree[T], stack: List[ImmutableBTree[T]], f: T ⇒ B, n: Long): Unit =
         tree match {
           case BNode(v, l, r @ BNode(_, _, _)) ⇒
             val stack0 = r :: stack
@@ -36,8 +36,7 @@ object Btrees {
             //println(s" stack: ${stack.mkString(",")}")
             go(l, stack, f, n + 1)
           case _ ⇒
-            if (stack.nonEmpty) go(stack.head, stack.tail, f, n)
-            else println(n)
+            if (stack.nonEmpty) go(stack.head, stack.tail, f, n) else println(n)
         }
 
       go(self, Nil, f, 0)
