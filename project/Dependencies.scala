@@ -10,8 +10,8 @@ object Dependencies {
     val slf4j = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
     val logback = "ch.qos.logback" % "logback-classic" % "1.1.2"
 
-    val akkaHttp = "com.typesafe.akka" %% "akka-http" % "10.0.9"
-    val akkaSprayJson = "com.typesafe.akka" %% "akka-http-spray-json" % "10.0.9"
+    val akkaHttp = "com.typesafe.akka" %% "akka-http" % "10.2.0"
+    val akkaSprayJson = "com.typesafe.akka" %% "akka-http-spray-json" % "10.2.0"
     val ficus = "com.iheart" %% "ficus" % "1.4.0"
     val akkaStreams = "com.typesafe.akka" %% "akka-stream" % akkaVersion
     val akkaStreamContrib = ("com.typesafe.akka" %% "akka-stream-contrib" % "0.11").excludeAll("com.typesafe.akka") //2.6.0

@@ -14,7 +14,7 @@ import zipkin.reporter.okhttp3.OkHttpSender
 import scala.concurrent.{Await, Future}
 import akka.http.scaladsl.Http
 import akka.stream.contrib.PassThroughFlow
-import akka.stream.{ActorMaterializer, KillSwitches, OverflowStrategy, SystemMaterializer}
+import akka.stream.{ActorMaterializer, KillSwitches, Materializer, OverflowStrategy, SystemMaterializer}
 import akka.stream.scaladsl.{BidiFlow, Flow, Keep, Sink, Source}
 import com.typesafe.config.ConfigFactory
 import io.sherlock.core.ServiceRegistry
@@ -35,6 +35,8 @@ object Main extends App with OptsSupport {
   val conf                  = ConfigFactory.load()
   implicit val system       = ActorSystem("sd", conf)
   implicit val materializer = SystemMaterializer(system).materializer
+    //Materializer.matFromSystem(system)
+
   import system.dispatcher
 
   val akkaPort  = conf.as[Int]("akka.remote.netty.tcp.port")
@@ -57,7 +59,7 @@ object Main extends App with OptsSupport {
 
   val httpApi = new HttpApi(name, registry, tracing)(system).route
 
-  val routeFlow   = Route.handlerFlow(httpApi)
+  val routeFlow   = Route.toFlow(httpApi)
   val hosts       = new AtomicReference(Set[String]())
   val uniqueHosts = new UniqueHostsStage(hosts)
 
@@ -149,12 +151,14 @@ object Main extends App with OptsSupport {
   }*/
 
   Http()
-    .bindAndHandle(
+    .newServerAt(hostname, httpPort)
+    .bindFlow(httpGraph)
+    /*.bindAndHandle(
       handler = httpGraph /*routeFlow*/,
       interface = hostname,
       port = httpPort
       /*, connectionContext = ConnectionContext.https(trustfulCtx)*/
-    )
+    )*/
     .onComplete {
       case scala.util.Success(_) ⇒
         println(s"seed-nodes: ${seedNodes.mkString(",")}")
