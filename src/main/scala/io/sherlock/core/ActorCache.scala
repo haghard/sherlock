@@ -31,10 +31,9 @@ object ActorCache {
 class ActorCache extends Actor with ActorLogging {
   var count: Long = 0L
 
-  override def receive: Receive = {
-    case r: Check ⇒
-      count = count + 1
-      log.info("count: {}", count)
-      sender() ! Ans(true, r.userId, r.req)
+  override def receive: Receive = { case r: Check ⇒
+    count = count + 1
+    log.info("count: {}", count)
+    sender() ! Ans(true, r.userId, r.req)
   }
 }

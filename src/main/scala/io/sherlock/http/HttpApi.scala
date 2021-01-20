@@ -95,22 +95,24 @@ class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(implici
     //implicit val m = ActorMaterializer(ActorMaterializerSettings(system).withInputBuffer(1, 1))
     implicit val m = SystemMaterializer(system).materializer
 
-    val attr = Attributes.inputBuffer(1, 1)
+    val attr  = Attributes.inputBuffer(1, 1)
     val attr1 = ActorAttributes.maxFixedBufferSize(1)
     //ActorAttributes.supervisionStrategy(???)
     //ActorAttributes.dispatcher("")
 
     val decider: Supervision.Decider = {
-      case _: NumberFormatException => Supervision.Resume
-      case _ => Supervision.Stop
+      case _: NumberFormatException ⇒ Supervision.Resume
+      case _                        ⇒ Supervision.Stop
     }
 
     //customize supervision stage per stage
-    Flow[Int].map(_ * 2)
+    Flow[Int]
+      .map(_ * 2)
       .withAttributes(ActorAttributes.supervisionStrategy(decider))
 
     val source = Source
-      .fromGraph(new ActorBasedSource[Protocol](pubSub, 1 << 5, FailStage)).withAttributes(attr1)
+      .fromGraph(new ActorBasedSource[Protocol](pubSub, 1 << 5, FailStage))
+      .withAttributes(attr1)
       .scan(0)((a, _) ⇒ a + 1)
       .map(timeToServerSentEvent(LocalTime.now, _))
       .keepAlive(4.seconds / 2, () ⇒ ServerSentEvent.heartbeat)
@@ -135,7 +137,7 @@ class HttpApi(serviceName: String, registry: ActorRef, tracing: Tracing)(implici
     implicit val d = system.dispatcher
 
     //ActorMaterializer(ActorMaterializerSettings(system).withInputBuffer(1, 1))
-    system.scheduler.scheduleWithFixedDelay(1.second, 500.millis)(() => pubSub ! 1)(system.dispatcher)
+    system.scheduler.scheduleWithFixedDelay(1.second, 500.millis)(() ⇒ pubSub ! 1)(system.dispatcher)
 
     val s = Source
       .actorRef[Int](1 << 8, OverflowStrategy.dropHead)

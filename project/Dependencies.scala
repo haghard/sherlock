@@ -1,8 +1,8 @@
 import sbt._
 
 object Dependencies {
-  val akkaVersion = "2.6.8"
-  val squbsVersion = "0.13.0"
+  val akkaVersion = "2.6.11"
+  val squbsVersion = "0.14.0"
 
   object Compile {
     val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
@@ -10,11 +10,11 @@ object Dependencies {
     val slf4j = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
     val logback = "ch.qos.logback" % "logback-classic" % "1.1.2"
 
-    val akkaHttp = "com.typesafe.akka" %% "akka-http" % "10.2.0"
-    val akkaSprayJson = "com.typesafe.akka" %% "akka-http-spray-json" % "10.2.0"
+    val akkaHttp = "com.typesafe.akka" %% "akka-http" % "10.2.3"
+    val akkaSprayJson = "com.typesafe.akka" %% "akka-http-spray-json" % "10.2.2"
     val ficus = "com.iheart" %% "ficus" % "1.4.0"
     val akkaStreams = "com.typesafe.akka" %% "akka-stream" % akkaVersion
-    val akkaStreamContrib = ("com.typesafe.akka" %% "akka-stream-contrib" % "0.11").excludeAll("com.typesafe.akka") //2.6.0
+    val akkaStreamContrib = ("com.typesafe.akka" %% "akka-stream-contrib" % "0.11") //.excludeAll("com.typesafe.akka")
 
     val opentracing = "io.opentracing" % "opentracing-api" % "0.21.0"
     val zipkinSender = "io.zipkin.reporter" % "zipkin-sender-okhttp3" % "0.7.0"
@@ -25,7 +25,8 @@ object Dependencies {
     //val tracing = "com.github.levkhomich" %% "akka-tracing-http"  % "0.6.1-SNAPSHOT"
     //val zipkin = "io.zipkin.finagle" %% "zipkin-finagle-http" % "0.4.0"
     //val akkaClusterManagement = "com.lightbend.akka" %% "akka-management-cluster-http" %  "0.2+20170418-2254"
-    val akkaClusterManagement = "com.lightbend.akka" %% "akka-management-cluster-http" % "0.3"
+
+    val akkaClusterManagement = "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.9"
     //val zipkin2 = "com.beachape" %% "zipkin-futures" % "0.2.1"
 
     val jvmUtil = "com.twitter" %% "util-jvm" % "6.45.0"
@@ -64,17 +65,18 @@ object Dependencies {
     val jsoniter = "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.0.1"
 
     // li haoyi ammonite repl embed
-    val ammonite = ("com.lihaoyi" % "ammonite" % "2.2.0" % "test").cross(CrossVersion.full)
+    //val ammonite = ("com.lihaoyi" % "ammonite" % "2.3.8" % "test").cross(CrossVersion.full)
 
     //https://squbs.readthedocs.io/en/latest/circuitbreaker/
-    val squbsP = ("org.squbs" %% "squbs-pattern" % squbsVersion).excludeAll("com.typesafe.akka")
-    val squbsExt = ("org.squbs" %% "squbs-ext" % squbsVersion).excludeAll("com.typesafe.akka")
+    val squbsP =    "org.squbs" %% "squbs-pattern" % squbsVersion  //.excludeAll("com.typesafe.akka")
+    val squbsExt =  "org.squbs" %% "squbs-ext"     % squbsVersion  //.excludeAll("com.typesafe.akka")
+
     val chronicle = "net.openhft" % "chronicle-queue" % "4.5.13"
 
     val oneNio = "ru.odnoklassniki" % "one-nio" % "1.2.0"
 
     val all = Seq(akkaActor, akkaHttp, akkaHttp, akkaSprayJson, akkaDistData, slf4j, logback, snaptree,
-      fingertree, radixtree, isarn, ammonite, catsColl, btree, /*swakka,*/
+      fingertree, radixtree, isarn, /*ammonite,*/ catsColl, btree, /*swakka,*/
       ficus, akkaStreams, algebird, jvmUtil) ++ Seq(opentracing, zipkinSender, brave /*, akkaClusterManagement*/ , playJson, jsoniter,
       squbsP, squbsExt, akkaStreamContrib, oneNio)
 

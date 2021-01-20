@@ -35,7 +35,7 @@ object Main extends App with OptsSupport {
   val conf                  = ConfigFactory.load()
   implicit val system       = ActorSystem("sd", conf)
   implicit val materializer = SystemMaterializer(system).materializer
-    //Materializer.matFromSystem(system)
+  //Materializer.matFromSystem(system)
 
   import system.dispatcher
 
@@ -65,6 +65,15 @@ object Main extends App with OptsSupport {
 
   //curl http://127.0.0.1:9090/ping/haghard
 
+  BidiFlow
+    .fromGraph(new HttpBidiFlow[HttpRequest, HttpRequest])
+    .join(Flow[(HttpRequest, String)].mapAsyncUnordered(4) { case (r, uuid) ⇒
+      Future {
+
+        (r, uuid)
+      }
+    })
+
   //val httpGraph =
   BidiFlow
     .fromGraph(new HttpBidiFlow[HttpRequest, HttpRequest])
@@ -89,14 +98,14 @@ object Main extends App with OptsSupport {
     }
 
   val postRequest: Flow[(HttpRequest, HttpResponse), HttpResponse, akka.NotUsed] =
-    Flow[(HttpRequest, HttpResponse)].map {
-      case (req, resp) ⇒
-        system.log.info("postRequest")
-        resp
+    Flow[(HttpRequest, HttpResponse)].map { case (req, resp) ⇒
+      system.log.info("postRequest")
+      resp
     }
 
   val httpGraph: Flow[HttpRequest, HttpResponse, akka.NotUsed] =
     preRequest
+      //.via(routeFlow)
       .via(akka.stream.contrib.PassThroughFlow(routeFlow))
       .via(postRequest)
 

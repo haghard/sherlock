@@ -221,13 +221,12 @@ object SqubsExamples {
           }(mat.executionContext)
         }
         .asFlow
-        .scan((initState, Promise[HttpResponse](), null.asInstanceOf[HttpRequest])) {
-          case (triple, elem) ⇒
-            val req            = elem._1
-            val p              = elem._2
-            val state          = triple._1
-            val (req0, state0) = authReq(req, state)
-            (state0, p, req0)
+        .scan((initState, Promise[HttpResponse](), null.asInstanceOf[HttpRequest])) { case (triple, elem) ⇒
+          val req            = elem._1
+          val p              = elem._2
+          val state          = triple._1
+          val (req0, state0) = authReq(req, state)
+          (state0, p, req0)
         }
         .map { case (_: State, p: Promise[HttpResponse], req: HttpRequest) ⇒ (req, p) }
     }
@@ -253,8 +252,8 @@ object SqubsExamples {
       .viaMat(KillSwitches.single)(Keep.both)
       .via(auth(State())(???))
       .via(domain(???))
-      .toMat(Sink.foreach { case (response, promise) ⇒ promise.trySuccess(response) }) {
-        case ((sink, switch), done) ⇒ (sink, switch, done)
+      .toMat(Sink.foreach { case (response, promise) ⇒ promise.trySuccess(response) }) { case ((sink, switch), done) ⇒
+        (sink, switch, done)
       }
       .addAttributes(ActorAttributes.supervisionStrategy(akka.stream.Supervision.resumingDecider))
       .run()(???)
@@ -301,8 +300,7 @@ object SqubsExamples {
 
   val ocHeader = "Unavailable"
 
-  /**
-    * https://en.wikipedia.org/wiki/Little%27s_law
+  /** https://en.wikipedia.org/wiki/Little%27s_law
     *
     * L = λ * W
     * L – the average number of items in a queuing system (queue size)
@@ -389,27 +387,25 @@ object SqubsExamples {
               val reqId = UUID.randomUUID.toString
               //if (reqInFlight.get.size < maxInFlight) {
 
-                Future {
+              Future {
 
-                  //if(rateLimiter.hasCapacity())
+                //if(rateLimiter.hasCapacity())
 
-                  //import akka.pattern.ask
-                  //tenantsRegion.ask
-                  captureReq(reqInFlight)(_ + (reqId → req))
-                  sys.log.info(s"flies in -> {}", reqId)
-                  //
-                  Thread.sleep(4000)
-                  (reqId, req)
-                }(sys.dispatcher)
-              /*} else {
+                //import akka.pattern.ask
+                //tenantsRegion.ask
+                captureReq(reqInFlight)(_ + (reqId → req))
+                sys.log.info(s"flies in -> {}", reqId)
+                //
+                Thread.sleep(4000)
+                (reqId, req)
+              }(sys.dispatcher)
+            /*} else {
                 sys.log.info("reject -> {}", reqId)
                 Future.successful((reqId, req.withHeaders(req.headers :+ RawHeader(ocHeader, "true"))))
               }*/
 
-
-
-              //req.entity.dataBytes
-              /*if (reqInFlight.get.size < maxInFlight)
+            //req.entity.dataBytes
+            /*if (reqInFlight.get.size < maxInFlight)
                 req.entity.toStrict(to)
                   .map { bytes ⇒
                     val r = blobs.put(reqId.getBytes, bytes.data.toArray) //.toByteBuffer.array
@@ -417,7 +413,7 @@ object SqubsExamples {
                     (reqId, req)
                   }(sys.dispatcher)*/
 
-              /*Future {
+            /*Future {
                   //import akka.pattern.ask
                   //tenantsRegion.ask
                   captureReq(reqInFlight)(_ + (reqId → req))
@@ -436,15 +432,14 @@ object SqubsExamples {
 
         val outbound: FlowShape[(String, HttpRequest), HttpRequest] =
           b.add(
-            Flow[(String, HttpRequest)].map {
-              case (reqId, req) ⇒
-                sys.log.info("Flies out -> {}", reqId)
+            Flow[(String, HttpRequest)].map { case (reqId, req) ⇒
+              sys.log.info("Flies out -> {}", reqId)
 
-                if (req.headers.find(_.name == ocHeader).isEmpty)
-                  captureReq(reqInFlight)(_ - reqId)
+              if (req.headers.find(_.name == ocHeader).isEmpty)
+                captureReq(reqInFlight)(_ - reqId)
 
-                sys.log.info(s"InFlight: [{}]", reqInFlight.get.keySet.mkString(","))
-                req
+              sys.log.info(s"InFlight: [{}]", reqInFlight.get.keySet.mkString(","))
+              req
             }
           )
         BidiShape.fromFlows(inbound, outbound)
@@ -489,9 +484,8 @@ final class HttpBidiFlow[In, Out] extends GraphStage[BidiShape[In, (In, String),
       def resAvailable(res: Try[(In, String)]) =
         res.fold(
           err ⇒ ???,
-          {
-            case (elem, reqId) ⇒
-              push(to, (elem, reqId))
+          { case (elem, reqId) ⇒
+            push(to, (elem, reqId))
           }
         )
 
@@ -531,7 +525,7 @@ final class HttpBidiFlow[In, Out] extends GraphStage[BidiShape[In, (In, String),
             }*/
             if (!hasBeenPulled(in)) pull(in)
 
-          override def onDownstreamFinish(): Unit = completeStage()
+          //override def onDownstreamFinish(cause: Throwable): Unit = completeStage()
         }
       )
 
@@ -581,7 +575,7 @@ final class HttpBidiFlow[In, Out] extends GraphStage[BidiShape[In, (In, String),
                 }
             } else complete(out)
 
-          override def onDownstreamFinish(): Unit = cancel(from)
+          override def onDownstreamFinish(cause: Throwable): Unit = cancel(from)
         }
       )
     }

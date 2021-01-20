@@ -5,9 +5,8 @@ object FailureDetector {
     val timestampsSorted = timestamps.sorted
     val first            = timestampsSorted.head
     val diffs = timestampsSorted
-      .foldLeft((Vector.empty[Long], first)) {
-        case ((deltas, last), next) ⇒
-          (deltas :+ (next - last), next)
+      .foldLeft((Vector.empty[Long], first)) { case ((deltas, last), next) ⇒
+        (deltas :+ (next - last), next)
       }
       ._1
       .sorted

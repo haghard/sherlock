@@ -11,8 +11,7 @@ need to rebalance after any insert
 
 //https://github.com/vkostyukov/scalacaster/blob/master/src/tree/RBTree.scala
 
-/**
-  * A color for RB-Tree's nodes.
+/** A color for RB-Tree's nodes.
   */
 abstract sealed class Color
 
@@ -20,38 +19,31 @@ case object Red extends Color
 
 case object Black extends Color
 
-/**
-  * A Red-Black Tree.
+/** A Red-Black Tree.
   */
 abstract sealed class RBTree[+A <% Ordered[A]] {
 
-  /**
-    * The color of this tree.
+  /** The color of this tree.
     */
   def color: Color
 
-  /**
-    * The value of this tree.
+  /** The value of this tree.
     */
   def value: A
 
-  /**
-    * The left child of this tree.
+  /** The left child of this tree.
     */
   def left: RBTree[A]
 
-  /**
-    * The right child of this tree.
+  /** The right child of this tree.
     */
   def right: RBTree[A]
 
-  /**
-    * Checks whether this tree is empty or not.
+  /** Checks whether this tree is empty or not.
     */
   def isEmpty: Boolean
 
-  /**
-    * Adds the given element into this tree.
+  /** Adds the given element into this tree.
     *
     * Time - O(log n)
     * Space - O(log n)
@@ -102,8 +94,7 @@ abstract sealed class RBTree[+A <% Ordered[A]] {
   def height: Int =
     if (isEmpty) 0 else math.max(left.height, right.height) + 1
 
-  /**
-    * Fails with given message.
+  /** Fails with given message.
     */
   def fail(m: String) = throw new NoSuchElementException(m)
 }
@@ -126,8 +117,7 @@ case object Leaf extends RBTree[Nothing] {
 
 object RBTree {
 
-  /**
-    * Returns an empty red-black tree instance.
+  /** Returns an empty red-black tree instance.
     *
     * Time - O(1)
     * Space - O(1)
@@ -137,8 +127,7 @@ object RBTree {
   def single[A <% Ordered[A]](c: Color, x: A, l: RBTree[A] = Leaf, r: RBTree[A] = Leaf): RBTree[A] =
     Branch(c, x, l, r)
 
-  /**
-    * Creates a new red-black tree from given 'xs' sequence.
+  /** Creates a new red-black tree from given 'xs' sequence.
     *
     * Time - O(n log n)
     * Space - O(log n)
