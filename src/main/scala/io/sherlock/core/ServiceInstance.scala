@@ -34,13 +34,12 @@ class ServiceInstance extends Actor with ActorLogging {
     truncated + newHeartBeat
   }
 
-  def await: Receive = {
-    case m @ HeartBeatTrace(hb, cxt, tracer) ⇒
-      val instanceSpan = tracer.newChild(cxt).name("instance").start()
-      replicator ! Update(serviceInstanceDataKey, ORSet.empty[Long], WriteLocal) { beats ⇒
-        updateHeartBeat(beats, instanceSpan)
-      }
-      context become active
+  def await: Receive = { case m @ HeartBeatTrace(hb, cxt, tracer) ⇒
+    val instanceSpan = tracer.newChild(cxt).name("instance").start()
+    replicator ! Update(serviceInstanceDataKey, ORSet.empty[Long], WriteLocal) { beats ⇒
+      updateHeartBeat(beats, instanceSpan)
+    }
+    context become active
   }
 
   import scala.concurrent.duration._

@@ -1,7 +1,7 @@
 import sbt._
 
 object Dependencies {
-  val akkaVersion = "2.6.11"
+  val akkaVersion = "2.6.13"
   val squbsVersion = "0.14.0"
 
   object Compile {
@@ -10,8 +10,9 @@ object Dependencies {
     val slf4j = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
     val logback = "ch.qos.logback" % "logback-classic" % "1.1.2"
 
-    val akkaHttp = "com.typesafe.akka" %% "akka-http" % "10.2.3"
-    val akkaSprayJson = "com.typesafe.akka" %% "akka-http-spray-json" % "10.2.2"
+    val akkaHttp = "com.typesafe.akka" %% "akka-http" % "10.2.4"
+    val akkaSprayJson = "com.typesafe.akka" %% "akka-http-spray-json" % "10.2.4"
+
     val ficus = "com.iheart" %% "ficus" % "1.4.0"
     val akkaStreams = "com.typesafe.akka" %% "akka-stream" % akkaVersion
     val akkaStreamContrib = ("com.typesafe.akka" %% "akka-stream-contrib" % "0.11") //.excludeAll("com.typesafe.akka")
@@ -33,6 +34,7 @@ object Dependencies {
 
     val algebird = "com.twitter" %% "algebird-core" % "0.13.0"
 
+    val cd = "com.datastax.cassandra" % "cassandra-driver-extras" % "3.10.2"
     /*
       Cassandra Version 1.1.1 uses SnapTree (https://github.com/nbronson/snaptree) for MemTable representation,
       which claims to be "A drop-in replacement for ConcurrentSkipListMap, with the additional guarantee that clone()
@@ -51,21 +53,24 @@ object Dependencies {
     val radixtree = "com.rklaehn" %% "radixtree" % "0.5.1"
 
     val isarn = "org.isarnproject" %% "isarn-collections" % "0.0.4"
+    val sketches = "org.isarnproject" %% "isarn-sketches" % "0.3.0"
 
     //val swakka = "net.jtownson" %% "swakka" % "0.1a-SNAPSHOT"
 
     //BinaryHeap which is an implementation of a Priority Queue
     //https://github.com/typelevel/cats-collections/blob/master/bench/src/main/scala/HeapBench.scala
     //https://efekahraman.github.io/2019/03/an-example-of-free-monads-and-optimization
+    //https://github.com/politrons/reactiveScala/blob/master/scala_features/src/main/scala/app/impl/algorithms/TreeDS.scala
     val catsColl = "org.typelevel" %% "cats-collections-core" % "0.7.0"
 
     val btree = "xyz.hyperreal" %% "b-tree" % "0.5"
 
     val playJson = "com.typesafe.play" %% "play-json" % "2.7.4"
     val jsoniter = "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.0.1"
-
-    // li haoyi ammonite repl embed
-    //val ammonite = ("com.lihaoyi" % "ammonite" % "2.3.8" % "test").cross(CrossVersion.full)
+    
+    val ammonite =
+      ("com.lihaoyi" % "ammonite" % "2.3.8-32-64308dc3" % "test").cross(CrossVersion.full)
+      //("com.lihaoyi" % "ammonite" % "2.2.0" % "test").cross(CrossVersion.full)
 
     //https://squbs.readthedocs.io/en/latest/circuitbreaker/
     val squbsP =    "org.squbs" %% "squbs-pattern" % squbsVersion  //.excludeAll("com.typesafe.akka")
@@ -76,7 +81,7 @@ object Dependencies {
     val oneNio = "ru.odnoklassniki" % "one-nio" % "1.2.0"
 
     val all = Seq(akkaActor, akkaHttp, akkaHttp, akkaSprayJson, akkaDistData, slf4j, logback, snaptree,
-      fingertree, radixtree, isarn, /*ammonite,*/ catsColl, btree, /*swakka,*/
+      fingertree, radixtree, isarn, ammonite, catsColl, btree, cd, /*swakka,*/
       ficus, akkaStreams, algebird, jvmUtil) ++ Seq(opentracing, zipkinSender, brave /*, akkaClusterManagement*/ , playJson, jsoniter,
       squbsP, squbsExt, akkaStreamContrib, oneNio)
 
